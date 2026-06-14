@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrimeJobAxis — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- ✅ FIREBASE — Admin credentials: jobaxiis@gmail.com / Deputy123! -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, updateDoc, orderBy, query, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const app  = initializeApp({
+  apiKey: "AIzaSyBEMRcXBynZ0NAoVnrdPd1ZQGSnqbh23Kc",
+  authDomain: "primejobaxis.firebaseapp.com",
+  projectId: "primejobaxis",
+  storageBucket: "primejobaxis.firebasestorage.app",
+  messagingSenderId: "37219532909",
+  appId: "1:37219532909:web:3ea55a05167f96676d7f64"
+});
+
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── Expose to window ────────────────────────────────────────
+window._auth      = auth;
+window._db        = db;
+window._getDocs   = getDocs;
+window._col       = (name) => collection(db, name);
+window._doc       = (col,id) => doc(db, col, id);
+window._update    = (ref,data) => updateDoc(ref, data);
+window._query     = query;
+window._orderBy   = orderBy;
+window._onSnap    = onSnapshot;
+window._fbReady   = true;
+
+window._signIn  = async (email, password) => {
+  // Use session persistence — session ends when browser tab closes
+  await setPersistence(auth, browserSessionPersistence);
+  return signInWithEmailAndPassword(auth, email, password);
+};
+window._signOut = () => signOut(auth);
+
+// ── ALWAYS sign out any existing session first ──────────────
+// This prevents a logged-in main-site user from bypassing admin login
+signOut(auth).then(() => {
+  // After clearing any session, show the login page
+  showLoginPage();
+}).catch(() => {
+  showLoginPage();
+});
+
+// Auth state listener — only fires AFTER a fresh login via doLogin()
+window._authListener = (callback) => {
+  // We don't use onAuthStateChanged automatically here
+  // because we always force logout on page load above.
+  // Instead, doLogin() calls this after successful sign-in.
+  window._onAuthSuccess = callback;
+};
+
+console.log('Admin Firebase ready ✅');
+</script>
+
+<style>
+/* ===== BASE ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;background:#f0f4f8;color:#0f172a;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#0284c7;border-radius:3px}
+:root{--b:#0284c7;--b2:#0369a1;--b3:#0c4a6e;--g:#10b981;--r:#ef4444;--o:#f97316;--dk:#0f172a;--sl:#64748b}
+
+/* ===== LOGIN PAGE ===== */
+.login-page{min-height:100vh;background:linear-gradient(135deg,#0c4a6e 0%,#0369a1 40%,#0284c7 72%,#0ea5e9 100%);display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+.login-page::before{content:'';position:absolute;width:500px;height:500px;border-radius:50%;background:rgba(255,255,255,.04);top:-200px;right:-100px;filter:blur(60px)}
+.login-page::after{content:'';position:absolute;width:380px;height:380px;border-radius:50%;background:rgba(255,255,255,.04);bottom:-130px;left:-80px;filter:blur(60px)}
+.login-card{background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,.25);position:relative;z-index:1;animation:fadeUp .4s ease}
+@keyframes fadeUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.login-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px}
+.lbox{width:40px;height:40px;background:var(--b);border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Playfair Display',serif;font-weight:700;font-size:20px;box-shadow:0 4px 14px rgba(2,132,199,.35)}
+.lbrand{font-family:'Playfair Display',serif;font-weight:700;font-size:22px;color:var(--dk);line-height:1}
+.lbrand em{color:var(--b);font-style:normal}
+.login-badge{display:inline-flex;align-items:center;gap:6px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;margin-bottom:20px}
+.lerr{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;display:none;line-height:1.5}
+.lerr.on{display:block}
+.fl{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:4px}
+.fi{width:100%;border:2px solid #e2e8f0;border-radius:11px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--dk);background:#fff;transition:all .2s;outline:none}
+.fi:focus{border-color:var(--b);box-shadow:0 0 0 3px rgba(2,132,199,.1)}
+.fi.err{border-color:#ef4444}
+.fg{margin-bottom:14px}
+
+/* ===== DASHBOARD LAYOUT ===== */
+.dashboard{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e8edf2;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.tb-left{display:flex;align-items:center;gap:12px}
+.tbox{width:32px;height:32px;background:var(--b);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Playfair Display',serif;font-weight:700;font-size:16px}
+.tbrand{font-family:'Playfair Display',serif;font-weight:700;font-size:18px;color:var(--dk)}
+.tbrand em{color:var(--b);font-style:normal}
+.tb-badge{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}
+.tb-right{display:flex;align-items:center;gap:10px}
+.admin-pill{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:999px;padding:5px 14px 5px 5px}
+.admin-av{width:26px;height:26px;background:var(--b);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px}
+.main{flex:1;padding:28px 24px;max-width:1400px;width:100%;margin:0 auto}
+@media(max-width:640px){.main{padding:18px 14px}.topbar{padding:0 14px}}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:11px;font-weight:600;font-family:'DM Sans',sans-serif;font-size:13px;border:none;cursor:pointer;transition:all .2s;line-height:1;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.bb{background:var(--b);color:#fff;box-shadow:0 3px 12px rgba(2,132,199,.25)}.bb:hover{background:var(--b2);transform:translateY(-1px)}
+.bo{background:transparent;color:var(--b);border:2px solid var(--b)}.bo:hover{background:var(--b);color:#fff}
+.br{background:#fef2f2;color:var(--r);border:1px solid #fecaca}.br:hover{background:#fee2e2}
+.bg2{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}.bg2:hover{background:#f1f5f9}
+.bfull{width:100%}
+.bsm{padding:7px 14px;font-size:12px}
+
+/* ===== STAT CARDS ===== */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #f1f5f9;display:flex;align-items:center;gap:14px;transition:all .2s}
+.stat:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
+.stat-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.stat-num{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--dk);line-height:1}
+.stat-lbl{color:var(--sl);font-size:12px;font-weight:500;margin-top:3px}
+@media(max-width:800px){.stats{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.stats{grid-template-columns:1fr 1fr}}
+
+/* ===== TABLE CARD ===== */
+.tcard{background:#fff;border-radius:18px;box-shadow:0 2px 14px rgba(0,0,0,.07);border:1px solid #f1f5f9;overflow:hidden}
+.thead{padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.thead h2{font-family:'Playfair Display',serif;font-size:19px;color:var(--dk)}
+.controls{display:flex;gap:9px;flex-wrap:wrap}
+.fi2{border:2px solid #e2e8f0;border-radius:10px;padding:8px 13px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dk);outline:none;background:#fff;transition:border-color .2s}
+.fi2:focus{border-color:var(--b)}
+select.fi2{cursor:pointer}
+.tscroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:700px}
+thead th{background:#f8fafc;padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #f1f5f9;white-space:nowrap}
+tbody tr{border-bottom:1px solid #f8fafc;cursor:pointer;transition:background .15s}
+tbody tr:hover{background:#f8fafc}
+tbody tr:last-child{border-bottom:none}
+td{padding:13px 14px;font-size:13px;color:#334155;vertical-align:middle}
+.tname{font-weight:700;color:var(--dk);font-size:13px}
+.temail{color:var(--b);font-size:12px}
+.tfooter{padding:12px 22px;border-top:1px solid #f1f5f9;font-size:12px;color:var(--sl)}
+@media(max-width:600px){thead th:nth-child(4),td:nth-child(4),thead th:nth-child(6),td:nth-child(6){display:none}}
+
+/* ===== STATUS BADGES ===== */
+.sb{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.sb-pending{background:#fef9c3;color:#a16207}
+.sb-reviewed{background:#e0f2fe;color:#0369a1}
+.sb-hired{background:#dcfce7;color:#15803d}
+.sb-rejected{background:#fee2e2;color:#b91c1c}
+
+/* ===== STATUS SELECT ===== */
+.ss{padding:5px 9px;border:2px solid #e2e8f0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;outline:none;font-weight:600;transition:border-color .2s}
+.ss:focus{border-color:var(--b)}
+.ss-pending{border-color:#fde68a;background:#fefce8;color:#a16207}
+.ss-reviewed{border-color:#bae6fd;background:#f0f9ff;color:#0369a1}
+.ss-hired{border-color:#bbf7d0;background:#f0fdf4;color:#15803d}
+.ss-rejected{border-color:#fecaca;background:#fef2f2;color:#b91c1c}
+
+/* ===== SIDE PANEL ===== */
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;justify-content:flex-end;backdrop-filter:blur(3px)}
+.panel-overlay.open{display:flex}
+.panel{background:#fff;width:min(500px,100%);height:100vh;overflow-y:auto;box-shadow:-12px 0 40px rgba(0,0,0,.15);animation:slideIn .25s ease;display:flex;flex-direction:column}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.ph{background:linear-gradient(135deg,var(--b3),var(--b2));padding:24px;color:#fff;flex-shrink:0}
+.pb{padding:22px;flex:1;overflow-y:auto}
+.dr{display:flex;margin-bottom:13px;gap:10px;align-items:flex-start}
+.dk2{font-size:11px;font-weight:700;color:var(--sl);text-transform:uppercase;width:90px;flex-shrink:0;padding-top:2px}
+.dv{font-size:13px;color:var(--dk);font-weight:500;flex:1;word-break:break-word;line-height:1.5}
+.divider{height:1px;background:#f1f5f9;margin:16px 0}
+.pa{display:flex;gap:9px;flex-wrap:wrap;padding:16px 22px;border-top:1px solid #f1f5f9;background:#f8fafc;flex-shrink:0}
+
+/* ===== EMPTY STATE ===== */
+.empty{padding:80px 20px;text-align:center}
+.empty-icon{font-size:64px;margin-bottom:16px}
+
+/* ===== LOADING ===== */
+.loading{padding:64px 20px;text-align:center;color:var(--sl)}
+.spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:var(--b);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== NOTIFICATION TOAST ===== */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-weight:600;font-size:13px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.15);animation:fadeUp .3s ease;display:flex;align-items:center;gap:8px;max-width:320px}
+.toast-green{background:#10b981;color:#fff}
+.toast-blue{background:#0284c7;color:#fff}
+.toast-red{background:#ef4444;color:#fff}
+
+/* ===== REFRESH PULSE ===== */
+.live-dot{width:7px;height:7px;background:#4ade80;border-radius:50%;animation:lp 2s infinite;flex-shrink:0}
+@keyframes lp{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.4)}50%{box-shadow:0 0 0 8px rgba(74,222,128,0)}}
+
+/* ===== MISC ===== */
+.hidden{display:none!important}
+.sf{font-family:'Playfair Display',serif}
+.card-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:400px){.card-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN — shown while Firebase checks if user is logged in -->
+<div id="auth-loading" style="position:fixed;inset:0;background:linear-gradient(135deg,#0c4a6e,#0369a1,#0284c7);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
+    <div style="width:44px;height:44px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:700;font-size:22px;color:#0284c7">P</div>
+    <span style="font-family:'Playfair Display',serif;font-weight:700;font-size:24px;color:#fff">Prime<em style="color:#bae6fd;font-style:normal">JobAxis</em></span>
+  </div>
+  <div style="width:40px;height:40px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <p style="color:#bae6fd;font-size:14px;margin-top:18px;font-weight:500">Verifying admin access...</p>
+</div>
+
+<!-- ============================================================
+     LOGIN PAGE
+============================================================ -->
+<div class="login-page" id="login-page" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="lbox">P</div>
+      <div>
+        <div class="lbrand">Prime<em>JobAxis</em></div>
+        <div style="font-size:11px;color:#94a3b8">Admin Dashboard</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:22px">
+      <div class="login-badge">🔒 Secure Admin Access Only</div>
+      <h2 class="sf" style="font-size:22px;margin-bottom:5px">Sign In to Dashboard</h2>
+      <p style="color:#64748b;font-size:13px">Monitor applications &amp; manage your platform</p>
+    </div>
+
+    <div class="lerr" id="lerr"></div>
+
+    <div class="fg">
+      <label class="fl">Admin Email</label>
+      <input class="fi" id="l-em" type="email" placeholder="jobaxiis@gmail.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="fg">
+      <label class="fl">Password</label>
+      <input class="fi" id="l-pw" type="password" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <button class="btn bb bfull" id="l-btn" style="padding:14px;font-size:15px;margin-top:4px" onclick="doLogin()">
+      Sign In to Dashboard →
+    </button>
+
+    <div style="margin-top:20px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:11px;padding:13px 16px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:18px;flex-shrink:0">ℹ️</span>
+      <p style="font-size:12px;color:#0369a1;line-height:1.6">This dashboard is for <strong>admin use only</strong>. Unauthorized access is prohibited. All activity is monitored and logged.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ADMIN DASHBOARD
+============================================================ -->
+<div class="dashboard" id="dashboard" style="display:none">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tbox">P</div>
+      <div>
+        <div class="tbrand">Prime<em>JobAxis</em></div>
+        <div style="font-size:10px;color:#94a3b8;line-height:1">Admin Dashboard</div>
+      </div>
+      <div class="tb-badge">● Live</div>
+    </div>
+    <div class="tb-right">
+      <div class="admin-pill">
+        <div class="admin-av" id="admin-av">A</div>
+        <span id="admin-em" style="font-size:12px;font-weight:600;color:#0369a1;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      </div>
+      <a class="btn bg2 bsm" href="index.html" target="_blank" title="Open main website">🌐 Visit Website</a>
+      <button class="btn bg2 bsm" onclick="refreshData()" title="Refresh data">🔄 Refresh</button>
+      <button class="btn br bsm" onclick="doSignOut()">🚪 Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+
+    <!-- Page header -->
+    <div style="margin-bottom:22px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="sf" style="font-size:26px;margin-bottom:4px">Applications Dashboard</h1>
+        <div style="display:flex;align-items:center;gap:6px;color:#64748b;font-size:13px">
+          <div class="live-dot"></div>
+          <span id="last-updated">Loading...</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn bb" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn bg2" onclick="refreshData()">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-icon" style="background:#f0f9ff">📋</div>
+        <div><div class="stat-num" id="st-total">—</div><div class="stat-lbl">Total Applications</div></div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon" style="background:#fefce8">⏳</div>
+        <div><div class="stat-num" id="st-pending">—</div><div class="stat-lbl">Pending Review</div></div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon" style="background:#f0fdf4">✅</div>
+        <div><div class="stat-num" id="st-hired">—</div><div class="stat-lbl">Hired</div></div>
+      </div>
+      <div class="stat">
+        <div class="stat-icon" style="background:#fef2f2">❌</div>
+        <div><div class="stat-num" id="st-rejected">—</div><div class="stat-lbl">Rejected</div></div>
+      </div>
+    </div>
+
+    <!-- Applications table -->
+    <div class="tcard">
+      <div class="thead">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2>All Applications</h2>
+          <div id="live-indicator" style="display:flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;color:#15803d">
+            <div class="live-dot"></div> Live
+          </div>
+        </div>
+        <div class="controls">
+          <input type="text" class="fi2" id="srch" style="width:190px" placeholder="🔍 Search name, email, country..." oninput="filterTable()">
+          <select class="fi2" id="fstat" style="width:140px" onchange="filterTable()">
+            <option value="">All Status</option>
+            <option value="pending">⏳ Pending</option>
+            <option value="reviewed">🔍 Reviewed</option>
+            <option value="hired">✅ Hired</option>
+            <option value="rejected">❌ Rejected</option>
+          </select>
+          <select class="fi2" id="fcat" style="width:160px" onchange="filterTable()">
+            <option value="">All Categories</option>
+            <option value="Remote Jobs">Remote Jobs</option>
+            <option value="Data Entry">Data Entry</option>
+            <option value="Customer Support">Customer Support</option>
+            <option value="Virtual Assistant">Virtual Assistant</option>
+            <option value="Typing Jobs">Typing Jobs</option>
+            <option value="Freelance Jobs">Freelance</option>
+            <option value="Work From Home">Work From Home</option>
+            <option value="Entry Level">Entry Level</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Loading state -->
+      <div id="tbl-loading" class="loading">
+        <div class="spinner"></div>
+        <p style="font-weight:500">Loading applications...</p>
+      </div>
+
+      <!-- Empty state -->
+      <div id="tbl-empty" class="empty hidden">
+        <div class="empty-icon">📭</div>
+        <h3 class="sf" style="font-size:20px;margin-bottom:8px">No Applications Yet</h3>
+        <p style="color:#64748b;font-size:13px;max-width:340px;margin:0 auto">Applications submitted on PrimeJobAxis.com will appear here in real-time.</p>
+      </div>
+
+      <!-- No results -->
+      <div id="tbl-nofilter" class="empty hidden">
+        <div class="empty-icon">🔍</div>
+        <h3 class="sf" style="font-size:20px;margin-bottom:8px">No Results Found</h3>
+        <p style="color:#64748b;font-size:13px;margin-bottom:16px">Try adjusting your search or filters.</p>
+        <button class="btn bo bsm" onclick="clearFilters()">Clear Filters</button>
+      </div>
+
+      <!-- Table -->
+      <div class="tscroll" id="tbl-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36px">#</th>
+              <th>Applicant</th>
+              <th>Country</th>
+              <th>Job Applied For</th>
+              <th>Payment Method</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th style="width:120px">Update Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="tfooter" id="tfooter" style="display:none">
+        <span id="tcount"></span>
+        <span style="float:right;color:#94a3b8" id="tlast"></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     DETAIL SIDE PANEL
+============================================================ -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanelOutside(event)">
+  <div class="panel" id="panel">
+
+    <!-- Panel header -->
+    <div class="ph">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <h2 class="sf" style="font-size:20px;margin-bottom:4px" id="pan-name">Applicant Details</h2>
+          <p id="pan-job" style="color:#bae6fd;font-size:13px"></p>
+        </div>
+        <button onclick="closePanel()" style="color:rgba(255,255,255,.7);background:rgba(255,255,255,.1);border:none;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">×</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span id="pan-status-badge" class="sb sb-pending">⏳ Pending</span>
+        <span id="pan-date" style="color:#bae6fd;font-size:12px"></span>
+      </div>
+    </div>
+
+    <!-- Panel body -->
+    <div class="pb" id="pan-body"></div>
+
+    <!-- Panel actions -->
+    <div class="pa">
+      <a class="btn bb" id="pan-email-btn" href="#" style="flex:1;justify-content:center">📧 Email</a>
+      <a class="btn bo" id="pan-call-btn" href="#" style="flex:1;justify-content:center">📞 Call</a>
+      <a class="btn" id="pan-wa-btn" href="#" target="_blank" style="flex:1;justify-content:center;background:#25d366;color:#fff;font-weight:700">💬 WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+var ALL_APPS = [];
+var FILTERED  = [];
+var OPEN_ID   = null;
+
+// ============================================================
+// AUTH
+// ============================================================
+function showLoginPage() {
+  document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('login-page').style.display   = 'flex';
+  document.getElementById('dashboard').style.display    = 'none';
+}
+
+function showDashboard(email) {
+  document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('login-page').style.display   = 'none';
+  document.getElementById('dashboard').style.display    = 'flex';
+  var av = (email || 'A')[0].toUpperCase();
+  document.getElementById('admin-av').textContent = av;
+  var shortEmail = email.length > 24 ? email.slice(0,22)+'...' : email;
+  document.getElementById('admin-em').textContent = shortEmail;
+}
+
+var ADMIN_EMAIL = 'jobaxiis@gmail.com';
+
+async function doLogin() {
+  var em  = document.getElementById('l-em').value.trim();
+  var pw  = document.getElementById('l-pw').value;
+  var err = document.getElementById('lerr');
+  err.classList.remove('on');
+  if (!em || !pw) {
+    err.innerHTML = '⚠️ Please enter your email and password.';
+    err.classList.add('on');
+    return;
+  }
+  var btn = document.getElementById('l-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block"></span> Verifying...</span>';
+  try {
+    if (!window._signIn) throw new Error('Firebase is still loading. Please wait a moment and try again.');
+    var result = await window._signIn(em, pw);
+    var user = result.user;
+    // Check it is ONLY the admin email
+    if (user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+      if (window._signOut) await window._signOut();
+      err.innerHTML = '⚠️ Access denied. This dashboard is for admin use only.';
+      err.classList.add('on');
+      btn.disabled = false;
+      btn.innerHTML = 'Sign In to Dashboard →';
+      return;
+    }
+    // ✅ Correct admin — show dashboard
+    window._adminUser = user;
+    showDashboard(user.email);
+    loadApplications();
+  } catch(e) {
+    var msg = '⚠️ Incorrect email or password. Please check and try again.';
+    if (e.code === 'auth/user-not-found')     msg = '⚠️ No account found with this email address.';
+    if (e.code === 'auth/invalid-email')      msg = '⚠️ Please enter a valid email address.';
+    if (e.code === 'auth/invalid-credential') msg = '⚠️ Incorrect email or password. Please check and try again.';
+    if (e.code === 'auth/too-many-requests')  msg = '⚠️ Too many failed attempts. Please wait a few minutes before trying again.';
+    err.innerHTML = msg;
+    err.classList.add('on');
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'Sign In to Dashboard →';
+}
+
+async function doSignOut() {
+  try { if (window._signOut) await window._signOut(); } catch(e) {}
+  ALL_APPS = []; FILTERED = [];
+  window._adminUser = null;
+  showLoginPage();
+}
+
+// ============================================================
+// LOAD APPLICATIONS
+// ============================================================
+async function loadApplications() {
+  showLoading(true);
+  try {
+    if (!window._fbReady || !window._db) {
+      // Firebase not ready yet — retry in 1 second
+      setTimeout(loadApplications, 1000);
+      return;
+    }
+
+    // Real-time listener using onSnapshot
+    var q = window._query(window._col('applications'), window._orderBy('createdAt', 'desc'));
+    window._onSnap(q, function(snapshot) {
+      ALL_APPS = [];
+      snapshot.forEach(function(d) {
+        ALL_APPS.push(Object.assign({ id: d.id }, d.data()));
+      });
+      updateStats();
+      filterTable();
+      showLoading(false);
+      document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    }, function(err) {
+      console.warn('Snapshot error:', err);
+      // Fall back to one-time load
+      loadOnce();
+    });
+
+  } catch(e) {
+    console.warn('Load error:', e);
+    loadOnce();
+  }
+}
+
+async function loadOnce() {
+  try {
+    var snap = await window._getDocs(window._col('applications'));
+    ALL_APPS = [];
+    snap.forEach(function(d) { ALL_APPS.push(Object.assign({ id: d.id }, d.data())); });
+    // Sort by date descending
+    ALL_APPS.sort(function(a,b){ return new Date(b.submittedAt||0) - new Date(a.submittedAt||0); });
+  } catch(e) {
+    console.warn('Fallback load error:', e);
+    ALL_APPS = DEMO_DATA; // use demo if Firebase fails
+  }
+  updateStats();
+  filterTable();
+  showLoading(false);
+  document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+}
+
+async function refreshData() {
+  showLoading(true);
+  await loadOnce();
+  toast('✅ Data refreshed successfully', 'green');
+}
+
+// ============================================================
+// DEMO DATA (shown if Firebase not configured)
+// ============================================================
+var DEMO_DATA = [
+  {id:'d1',fullName:'Sarah Mitchell',email:'sarah.m@gmail.com',phone:'+1 555 010 1234',dateOfBirth:'04/12/1992',streetAddress:'245 Maple Avenue, Apt 3A',city:'Houston',stateProvince:'Texas',zipCode:'77001',country:'United States',jobTitle:'Remote Data Entry Specialist',preferredCategory:'Data Entry',paymentMethod:'Bank Transfer (ACH)',status:'hired',englishLevel:'Advanced',deviceType:'Laptop (Windows)',internetAccess:'High-speed broadband',experienceLevel:'Less than 1 Year',introduction:'I am very organized and detail-oriented. Looking for flexible remote work that allows me to care for my family.',submittedAt:'2025-05-14T10:23:00Z',userEmail:'sarah.m@gmail.com'},
+  {id:'d2',fullName:'Emmanuel Kwesi',email:'e.kwesi@gmail.com',phone:'+233 244 112233',country:'Ghana',jobTitle:'Executive Virtual Assistant',preferredCategory:'Virtual Assistant',paymentMethod:'Cryptocurrency',status:'reviewed',age:'25–34',englishLevel:'Intermediate',deviceType:'Mobile Phone (Android)',internetAccess:'Mobile data (4G/5G)',experienceLevel:'No Experience',introduction:'Self-motivated with strong organizational skills. Ready to learn and grow in a virtual assistant role from home.',submittedAt:'2025-05-15T08:44:00Z',userEmail:'e.kwesi@gmail.com'},
+  {id:'d3',fullName:'Linda Johnson',email:'linda.j@outlook.com',phone:'+1 647 555 0202',country:'Canada',jobTitle:'Virtual Customer Support Representative',preferredCategory:'Customer Support',paymentMethod:'Mobile Deposit',status:'pending',age:'35–44',englishLevel:'Native / Bilingual',deviceType:'Desktop Computer',internetAccess:'High-speed broadband',experienceLevel:'3–5 Years',introduction:'Excellent communication skills and patient with customers. Experienced in email-based support and issue resolution.',submittedAt:'2025-05-16T14:12:00Z',userEmail:'linda.j@outlook.com'},
+  {id:'d4',fullName:'Maria Santos',email:'maria.s@yahoo.com',phone:'+63 912 345 6789',country:'Philippines',jobTitle:'Online Typing & Transcription Clerk',preferredCategory:'Typing Jobs',paymentMethod:'Credit Card Payment',status:'pending',age:'18–24',englishLevel:'Advanced',deviceType:'Laptop (Mac)',internetAccess:'Standard broadband',experienceLevel:'No Experience',introduction:'Fast typist at 65+ WPM. Looking for flexible part-time work while completing my university degree in Communications.',submittedAt:'2025-05-17T09:00:00Z',userEmail:'maria.s@yahoo.com'},
+  {id:'d5',fullName:'James Okonkwo',email:'james.ok@gmail.com',phone:'+234 803 456 7890',country:'Nigeria',jobTitle:'Work From Home Chat Support Agent',preferredCategory:'Customer Support',paymentMethod:'Bank Transfer (ACH)',status:'rejected',age:'25–34',englishLevel:'Intermediate',deviceType:'Mobile Phone (Android)',internetAccess:'Mobile data (4G/5G)',experienceLevel:'Less than 1 Year',introduction:'Hardworking and eager to learn. Quick learner with a very positive attitude toward new challenges.',submittedAt:'2025-05-18T11:30:00Z',userEmail:'james.ok@gmail.com'},
+  {id:'d6',fullName:'Priya Sharma',email:'priya.sharma@gmail.com',phone:'+91 98765 43210',country:'India',jobTitle:'Online Product Listing & Data Entry Assistant',preferredCategory:'Data Entry',paymentMethod:'Cryptocurrency',status:'pending',age:'18–24',englishLevel:'Advanced',deviceType:'Laptop (Windows)',internetAccess:'High-speed broadband',experienceLevel:'1–2 Years',introduction:'Experience with e-commerce platforms and product data management. Reliable, fast, and very detail-focused.',submittedAt:'2025-05-19T07:15:00Z',userEmail:'priya.sharma@gmail.com'},
+  {id:'d7',fullName:'Carlos Rivera',email:'carlos.r@gmail.com',phone:'+52 55 1234 5678',country:'Mexico',jobTitle:'Online Survey & Form Completion Specialist',preferredCategory:'Entry Level',paymentMethod:'Mobile Deposit',status:'hired',age:'18–24',englishLevel:'Intermediate',deviceType:'Mobile Phone (Android)',internetAccess:'Mobile data (4G/5G)',experienceLevel:'No Experience',introduction:'Looking for a simple online job I can do from my phone. Very consistent and will complete all tasks on time.',submittedAt:'2025-05-20T13:00:00Z',userEmail:'carlos.r@gmail.com'},
+  {id:'d8',fullName:'Amara Diallo',email:'amara.d@gmail.com',phone:'+221 77 123 4567',country:'Senegal',jobTitle:'Remote Lead Generation & Research Assistant',preferredCategory:'Freelance Jobs',paymentMethod:'Cryptocurrency',status:'reviewed',age:'25–34',englishLevel:'Advanced',deviceType:'Laptop (Windows)',internetAccess:'Standard broadband',experienceLevel:'1–2 Years',introduction:'Strong research skills and experience using LinkedIn and Google to find business contacts. Enjoy systematic, detail-oriented work.',submittedAt:'2025-05-21T09:30:00Z',userEmail:'amara.d@gmail.com'},
+  {id:'d9',fullName:'Sophie Williams',email:'sophie.w@hotmail.com',phone:'+44 7700 900123',country:'United Kingdom',jobTitle:'Online English Proofreader & Copy Editor',preferredCategory:'Freelance Jobs',paymentMethod:'Bank Transfer (ACH)',status:'pending',age:'25–34',englishLevel:'Native / Bilingual',deviceType:'Laptop (Mac)',internetAccess:'High-speed broadband',experienceLevel:'3–5 Years',introduction:'Degree in English Literature and 3 years of freelance proofreading experience. Passionate about clear, error-free writing.',submittedAt:'2025-05-22T16:45:00Z',userEmail:'sophie.w@hotmail.com'},
+  {id:'d10',fullName:'Kofi Mensah',email:'kofi.m@gmail.com',phone:'+233 201 234 5678',country:'Ghana',jobTitle:'Social Media Assistant & Content Scheduler',preferredCategory:'Work From Home',paymentMethod:'Mobile Deposit',status:'pending',age:'18–24',englishLevel:'Advanced',deviceType:'Mobile Phone (Android)',internetAccess:'Mobile data (4G/5G)',experienceLevel:'Less than 1 Year',introduction:'I use social media every day and understand how platforms work. Creative and able to write engaging captions and schedule posts.',submittedAt:'2025-05-23T10:00:00Z',userEmail:'kofi.m@gmail.com'},
+];
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  document.getElementById('st-total').textContent    = ALL_APPS.length;
+  document.getElementById('st-pending').textContent  = ALL_APPS.filter(function(a){return (a.status||'pending')==='pending';}).length;
+  document.getElementById('st-hired').textContent    = ALL_APPS.filter(function(a){return a.status==='hired';}).length;
+  document.getElementById('st-rejected').textContent = ALL_APPS.filter(function(a){return a.status==='rejected';}).length;
+}
+
+// ============================================================
+// TABLE RENDER
+// ============================================================
+var STATUS_CLASSES = {pending:'sb-pending',reviewed:'sb-reviewed',hired:'sb-hired',rejected:'sb-rejected'};
+var STATUS_LABELS  = {pending:'⏳ Pending',reviewed:'🔍 Reviewed',hired:'✅ Hired',rejected:'❌ Rejected'};
+var SS_CLASSES     = {pending:'ss-pending',reviewed:'ss-reviewed',hired:'ss-hired',rejected:'ss-rejected'};
+
+function filterTable() {
+  var q    = (document.getElementById('srch').value || '').toLowerCase();
+  var stat = document.getElementById('fstat').value;
+  var cat  = document.getElementById('fcat').value;
+
+  FILTERED = ALL_APPS.filter(function(a) {
+    var mq = !q || (a.fullName||'').toLowerCase().indexOf(q)>-1 ||
+             (a.email||'').toLowerCase().indexOf(q)>-1 ||
+             (a.country||'').toLowerCase().indexOf(q)>-1 ||
+             (a.jobTitle||'').toLowerCase().indexOf(q)>-1;
+    var ms = !stat || (a.status||'pending') === stat;
+    var mc = !cat  || (a.preferredCategory||'') === cat;
+    return mq && ms && mc;
+  });
+
+  renderTable();
+}
+
+function renderTable() {
+  var tb  = document.getElementById('tbody');
+  var wrap = document.getElementById('tbl-wrap');
+  var emp  = document.getElementById('tbl-empty');
+  var nof  = document.getElementById('tbl-nofilter');
+  var ft   = document.getElementById('tfooter');
+  var tc   = document.getElementById('tcount');
+  var tl   = document.getElementById('tlast');
+
+  var hasSearch = document.getElementById('srch').value || document.getElementById('fstat').value || document.getElementById('fcat').value;
+
+  if (ALL_APPS.length === 0) {
+    wrap.style.display = 'none'; ft.style.display = 'none';
+    emp.classList.remove('hidden'); nof.classList.add('hidden');
+    return;
+  }
+  if (FILTERED.length === 0 && hasSearch) {
+    wrap.style.display = 'none'; ft.style.display = 'none';
+    emp.classList.add('hidden'); nof.classList.remove('hidden');
+    return;
+  }
+
+  emp.classList.add('hidden'); nof.classList.add('hidden');
+  wrap.style.display = 'block';
+  ft.style.display   = 'block';
+
+  tb.innerHTML = FILTERED.map(function(a, i) {
+    var st  = a.status || 'pending';
+    var stClass = STATUS_CLASSES[st] || 'sb-pending';
+    var ssClass = SS_CLASSES[st] || 'ss-pending';
+    return '<tr onclick="openPanel(\'' + a.id + '\')">' +
+      '<td style="color:#94a3b8;font-size:12px">' + (i+1) + '</td>' +
+      '<td><div class="tname">' + (a.fullName||'—') + '</div><div class="temail">' + (a.email||'—') + '</div></td>' +
+      '<td>' + (a.country||'—') + '</td>' +
+      '<td style="font-size:12px;max-width:160px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (a.jobTitle||a.preferredCategory||'—') + '</div><div style="color:#94a3b8;font-size:11px">' + (a.preferredCategory||'') + '</div></td>' +
+      '<td style="font-size:12px">' + (a.paymentMethod||'—') + '</td>' +
+      '<td onclick="event.stopPropagation()"><span class="sb ' + stClass + '">' + (STATUS_LABELS[st]||st) + '</span></td>' +
+      '<td style="font-size:12px;white-space:nowrap;color:#64748b">' + fmtDate(a.submittedAt) + '</td>' +
+      '<td onclick="event.stopPropagation()">' +
+        '<select class="ss ' + ssClass + '" onchange="updateStatus(\'' + a.id + '\',this.value,this)">' +
+          '<option value="pending"'  + (st==='pending'  ?' selected':'') + '>⏳ Pending</option>' +
+          '<option value="reviewed"' + (st==='reviewed' ?' selected':'') + '>🔍 Reviewed</option>' +
+          '<option value="hired"'    + (st==='hired'    ?' selected':'') + '>✅ Hired</option>' +
+          '<option value="rejected"' + (st==='rejected' ?' selected':'') + '>❌ Rejected</option>' +
+        '</select>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  tc.textContent = 'Showing ' + FILTERED.length + ' of ' + ALL_APPS.length + ' applications';
+  tl.textContent = 'Click any row to view full details';
+}
+
+function fmtDate(dt) {
+  if (!dt) return '—';
+  try {
+    var d = new Date(dt);
+    return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  } catch(e) { return String(dt).slice(0,10); }
+}
+
+function clearFilters() {
+  document.getElementById('srch').value  = '';
+  document.getElementById('fstat').value = '';
+  document.getElementById('fcat').value  = '';
+  filterTable();
+}
+
+// ============================================================
+// UPDATE STATUS
+// ============================================================
+async function updateStatus(id, newStatus, selectEl) {
+  // Update local data immediately
+  var app = ALL_APPS.find(function(a){return a.id===id;});
+  if (app) app.status = newStatus;
+  updateStats();
+
+  // Update select color
+  if (selectEl) {
+    selectEl.className = 'ss ' + (SS_CLASSES[newStatus]||'ss-pending');
+  }
+
+  // If panel is open for this app, update the badge
+  if (OPEN_ID === id) {
+    var badge = document.getElementById('pan-status-badge');
+    if (badge) {
+      badge.className = 'sb ' + (STATUS_CLASSES[newStatus]||'sb-pending');
+      badge.textContent = STATUS_LABELS[newStatus]||newStatus;
+    }
+  }
+
+  // Save to Firebase
+  try {
+    if (window._fbReady && window._db && window._doc && window._update) {
+      await window._update(window._doc('applications', id), {status: newStatus});
+      toast('✅ Status updated to "' + newStatus + '"', 'green');
+    }
+  } catch(e) {
+    console.warn('Update status error:', e.message);
+    toast('⚠️ Could not save to database. Check your connection.', 'red');
+  }
+}
+
+// ============================================================
+// DETAIL PANEL
+// ============================================================
+function openPanel(id) {
+  var app = ALL_APPS.find(function(a){return a.id===id;});
+  if (!app) return;
+  OPEN_ID = id;
+
+  var st = app.status || 'pending';
+
+  document.getElementById('pan-name').textContent = app.fullName || 'Unknown Applicant';
+  document.getElementById('pan-job').textContent  = (app.jobTitle||app.preferredCategory||'General Application') + ' · ' + fmtDate(app.submittedAt);
+
+  var badge = document.getElementById('pan-status-badge');
+  badge.className   = 'sb ' + (STATUS_CLASSES[st]||'sb-pending');
+  badge.textContent = STATUS_LABELS[st]||st;
+
+  document.getElementById('pan-date').textContent = 'Submitted: ' + fmtDate(app.submittedAt);
+
+  // Action buttons
+  document.getElementById('pan-email-btn').href = 'mailto:' + (app.email||'');
+  document.getElementById('pan-call-btn').href  = 'tel:'    + (app.phone||'');
+  var waNum = (app.phone||'').replace(/[^0-9]/g,'');
+  document.getElementById('pan-wa-btn').href = 'https://wa.me/' + waNum;
+
+  // Build body
+  var sections = [
+    {title:'Contact Information', rows:[
+      ['Full Name',    app.fullName],
+      ['Email',        app.email],
+      ['Phone',        app.phone],
+      ['Date of Birth',app.dateOfBirth],
+      ['Street',       app.streetAddress],
+      ['City',         app.city],
+      ['State',        app.stateProvince],
+      ['ZIP Code',     app.zipCode],
+      ['Country',      app.country],
+    ]},
+    {title:'Qualifications', rows:[
+      ['English Level',   app.englishLevel],
+      ['Device',          app.deviceType],
+      ['Internet',        app.internetAccess],
+      ['Experience',      app.experienceLevel],
+    ]},
+    {title:'Job Details', rows:[
+      ['Job Applied',     app.jobTitle],
+      ['Category',        app.preferredCategory],
+      ['Payment Method',  app.paymentMethod],
+      ['Payment Note',    app.paymentNote],
+      ['Account Email',   app.userEmail],
+    ]},
+  ];
+
+  var html = '';
+
+  // Status updater at top of panel
+  html += '<div style="margin-bottom:18px;padding:14px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0">' +
+    '<p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">Update Application Status</p>' +
+    '<select class="fi2" style="width:100%;font-weight:700;font-size:13px" onchange="updateStatus(\'' + app.id + '\',this.value,this)">' +
+      '<option value="pending"'  + (st==='pending'  ?' selected':'') + '>⏳ Pending — Under Review</option>' +
+      '<option value="reviewed"' + (st==='reviewed' ?' selected':'') + '>🔍 Reviewed — Assessed</option>' +
+      '<option value="hired"'    + (st==='hired'    ?' selected':'') + '>✅ Hired — Qualified</option>' +
+      '<option value="rejected"' + (st==='rejected' ?' selected':'') + '>❌ Rejected — Not Qualified</option>' +
+    '</select>' +
+  '</div>';
+
+  sections.forEach(function(sec) {
+    html += '<p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:8px;margin-top:16px">' + sec.title + '</p>';
+    sec.rows.forEach(function(r) {
+      if (r[1]) {
+        html += '<div class="dr">' +
+          '<div class="dk2">' + r[0] + '</div>' +
+          '<div class="dv">' + r[1] + '</div>' +
+        '</div>';
+      }
+    });
+  });
+
+  // Introduction
+  if (app.introduction) {
+    html += '<div class="divider"></div>' +
+      '<p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Introduction</p>' +
+      '<div style="background:#f8fafc;border-radius:11px;padding:13px;border:1px solid #e2e8f0;font-size:13px;color:#334155;line-height:1.7">' + app.introduction + '</div>';
+  }
+
+  document.getElementById('pan-body').innerHTML = html;
+  document.getElementById('panel-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePanel() {
+  document.getElementById('panel-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  OPEN_ID = null;
+}
+
+function closePanelOutside(e) {
+  if (e.target === document.getElementById('panel-overlay')) closePanel();
+}
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+function exportCSV() {
+  if (!ALL_APPS.length) { toast('⚠️ No applications to export.', 'red'); return; }
+  var headers = ['#','Full Name','Email','Phone','Date of Birth','Street Address','City','State','ZIP Code','Country','Job Title','Category','Payment Method','Status','English Level','Device','Internet','Experience','Introduction','Submitted At','Account Email'];
+  var rows = FILTERED.length ? FILTERED : ALL_APPS;
+  var csv = [headers.join(',')].concat(rows.map(function(a,i){
+    return [
+      i+1, a.fullName, a.email, a.phone, a.dateOfBirth,
+      a.streetAddress, a.city, a.stateProvince, a.zipCode, a.country,
+      a.jobTitle, a.preferredCategory, a.paymentMethod, a.status||'pending',
+      a.englishLevel, a.deviceType, a.internetAccess, a.experienceLevel,
+      (a.introduction||'').replace(/\n/g,' '), a.submittedAt, a.userEmail
+    ].map(function(v){ return '"' + String(v||'').replace(/"/g,'""') + '"'; }).join(',');
+  })).join('\n');
+
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'PrimeJobAxis-Applications-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 Exported ' + rows.length + ' applications to CSV', 'blue');
+}
+
+// ============================================================
+// LOADING STATE
+// ============================================================
+function showLoading(loading) {
+  document.getElementById('tbl-loading').style.display = loading ? 'block' : 'none';
+  if (!loading) {
+    document.getElementById('tbl-wrap').style.display   = ALL_APPS.length ? 'block' : 'none';
+    document.getElementById('tbl-empty').classList.toggle('hidden', ALL_APPS.length > 0);
+  }
+}
+
+// ============================================================
+// TOAST NOTIFICATION
+// ============================================================
+function toast(msg, type) {
+  var existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.className = 'toast toast-' + (type||'blue');
+  t.innerHTML = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ if(t.parentNode) t.remove(); }, 3500);
+}
+
+// ============================================================
+// KEYBOARD SHORTCUT
+// ============================================================
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePanel();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,3712 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrimeJobAxis - Remote Jobs Worldwide | Work From Anywhere</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const app = initializeApp({
+      apiKey: "AIzaSyBEMRcXBynZ0NAoVnrdPd1ZQGSnqbh23Kc",
+      authDomain: "primejobaxis.firebaseapp.com",
+      projectId: "primejobaxis",
+      storageBucket: "primejobaxis.firebasestorage.app",
+      messagingSenderId: "37219532909",
+      appId: "1:37219532909:web:3ea55a05167f96676d7f64"
+    });
+
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    window._fbAuth = auth;
+    window._fbDB = db;
+    window._fbCol = collection;
+    window._fbAdd = addDoc;
+    window._fbTS = serverTimestamp;
+    window._fbSignUp = (e, p) => createUserWithEmailAndPassword(auth, e, p);
+    window._fbSignIn = (e, p) => signInWithEmailAndPassword(auth, e, p);
+    window._fbSignOut = () => signOut(auth);
+    window._fbReset = (e) => sendPasswordResetEmail(auth, e);
+
+    onAuthStateChanged(auth, user => {
+      window._user = user || null;
+      const on = !!user;
+
+      // Navbar (guest / user)
+      const ng = document.getElementById('nb-guest');
+      const nu = document.getElementById('nb-user');
+      const mg = document.getElementById('nb-mob-guest');
+      const mu = document.getElementById('nb-mob-user');
+      if (ng) ng.style.display = on ? 'none' : 'flex';
+      if (nu) nu.style.display = on ? 'flex' : 'none';
+      if (mg) mg.style.display = on ? 'none' : 'block';
+      if (mu) mu.style.display = on ? 'block' : 'none';
+
+      if (on) {
+        const av = document.getElementById('uav');
+        const un = document.getElementById('uname');
+        const ud = document.getElementById('udrop-em');
+        if (av) av.textContent = user.email[0].toUpperCase();
+        if (un) un.textContent = user.email.length > 22 ? user.email.slice(0, 20) + '...' : user.email;
+        if (ud) ud.textContent = user.email;
+        const ae = document.getElementById('a-email');
+        if (ae) ae.value = user.email;
+      }
+
+      // Update all CTA buttons
+      updateAuthButtons();
+
+      // Auto-start pending job application after login
+      if (on && window._pendingJob) {
+        const jid = window._pendingJob;
+        window._pendingJob = null;
+        closeModal();
+        setTimeout(() => startApply(jid), 350);
+      }
+    });
+
+
+    console.log('Firebase ready');
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: #0f172a;
+      background: #f8fafc;
+      -webkit-font-smoothing: antialiased
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #0284c7;
+      border-radius: 3px
+    }
+
+    :root {
+      --b: #0284c7;
+      --b2: #0369a1;
+      --b3: #0c4a6e;
+      --g: #10b981;
+      --dk: #0f172a;
+      --sl: #64748b
+    }
+
+    .wrap {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 20px
+    }
+
+    .sec {
+      padding: 72px 0
+    }
+
+    .g2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px
+    }
+
+    .g3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 22px
+    }
+
+    .g4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px
+    }
+
+    @media(max-width:880px) {
+
+      .g2,
+      .g3 {
+        grid-template-columns: 1fr
+      }
+
+      .g4 {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media(max-width:500px) {
+      .g4 {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    .page {
+      display: none
+    }
+
+    .page.active {
+      display: block
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+      line-height: 1;
+      white-space: nowrap
+    }
+
+    .btn:active {
+      transform: scale(.97)
+    }
+
+    .bb {
+      background: var(--b);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, .3)
+    }
+
+    .bb:hover {
+      background: var(--b2);
+      transform: translateY(-1px)
+    }
+
+    .bo {
+      background: transparent;
+      color: var(--b);
+      border: 2px solid var(--b)
+    }
+
+    .bo:hover {
+      background: var(--b);
+      color: #fff
+    }
+
+    .bw {
+      background: #fff;
+      color: var(--b2);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .13)
+    }
+
+    .bw:hover {
+      transform: translateY(-2px)
+    }
+
+    .bg {
+      background: rgba(255, 255, 255, .13);
+      color: #fff;
+      border: 2px solid rgba(255, 255, 255, .4)
+    }
+
+    .bg:hover {
+      background: rgba(255, 255, 255, .22)
+    }
+
+    .bsm {
+      padding: 8px 16px;
+      font-size: 13px
+    }
+
+    .blg {
+      padding: 16px 36px;
+      font-size: 17px
+    }
+
+    .bfull {
+      width: 100%
+    }
+
+    .brow {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, .07);
+      border: 1px solid #f1f5f9;
+      transition: all .3s
+    }
+
+    .ch:hover {
+      box-shadow: 0 10px 36px rgba(14, 165, 233, .18);
+      transform: translateY(-4px)
+    }
+
+    .bdg {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600
+    }
+
+    .bbl {
+      background: #e0f2fe;
+      color: #0369a1
+    }
+
+    .bgr {
+      background: #dcfce7;
+      color: #15803d
+    }
+
+    .bor {
+      background: #ffedd5;
+      color: #c2410c
+    }
+
+    .bgy {
+      background: #f1f5f9;
+      color: #475569
+    }
+
+    .bpu {
+      background: #ede9fe;
+      color: #7c3aed
+    }
+
+    .sf {
+      font-family: 'Playfair Display', serif
+    }
+
+    .lbl {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--b);
+      margin-bottom: 7px
+    }
+
+    .h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--dk);
+      line-height: 1.2
+    }
+
+    .sub {
+      font-size: 16px;
+      color: var(--sl);
+      line-height: 1.7;
+      margin-top: 10px
+    }
+
+    @media(max-width:600px) {
+      .h2 {
+        font-size: 25px
+      }
+    }
+
+    .tc {
+      text-align: center
+    }
+
+    .tw {
+      color: #fff
+    }
+
+    .mt1 {
+      margin-top: 8px
+    }
+
+    .mt2 {
+      margin-top: 16px
+    }
+
+    .mt3 {
+      margin-top: 22px
+    }
+
+    .mt4 {
+      margin-top: 30px
+    }
+
+    .mt5 {
+      margin-top: 44px
+    }
+
+    .mb2 {
+      margin-bottom: 16px
+    }
+
+    .mb3 {
+      margin-bottom: 22px
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    /* NAV */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(255, 255, 255, .97);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #f0f0f0;
+      box-shadow: 0 2px 14px rgba(0, 0, 0, .06)
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 12px
+    }
+
+    .nlogo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      flex-shrink: 0
+    }
+
+    .nbox {
+      width: 34px;
+      height: 34px;
+      background: var(--b);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 17px;
+      flex-shrink: 0
+    }
+
+    .nbrand {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--dk);
+      line-height: 1
+    }
+
+    .nbrand em {
+      color: var(--b);
+      font-style: normal
+    }
+
+    .nsub {
+      font-size: 10px;
+      color: #94a3b8
+    }
+
+    .nlinks {
+      display: flex;
+      align-items: center;
+      gap: 2px
+    }
+
+    .nl {
+      padding: 7px 11px;
+      border-radius: 8px;
+      color: #475569;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: 'DM Sans', sans-serif;
+      transition: all .15s;
+      white-space: nowrap
+    }
+
+    .nl:hover,
+    .nl.on {
+      color: var(--b);
+      background: #f0f9ff
+    }
+
+    .nright {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0
+    }
+
+    .upill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 999px;
+      padding: 5px 12px 5px 5px;
+      cursor: pointer;
+      position: relative
+    }
+
+    .uav {
+      width: 26px;
+      height: 26px;
+      background: var(--b);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px
+    }
+
+    .udrop {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .12);
+      border: 1px solid #f1f5f9;
+      padding: 6px;
+      min-width: 200px;
+      z-index: 300
+    }
+
+    .udrop-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 9px 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #475569;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-radius: 8px
+    }
+
+    .udrop-item:hover {
+      background: #f8fafc;
+      color: var(--b)
+    }
+
+    .udrop-item.red {
+      color: #ef4444
+    }
+
+    .udrop-item.red:hover {
+      background: #fef2f2
+    }
+
+    .burger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 7px;
+      background: none;
+      border: none
+    }
+
+    .burger span {
+      width: 21px;
+      height: 2px;
+      background: var(--dk);
+      border-radius: 2px;
+      display: block
+    }
+
+    .mnav {
+      display: none;
+      background: #fff;
+      border-top: 1px solid #f1f5f9;
+      padding: 14px 20px 18px
+    }
+
+    .mnav.open {
+      display: block
+    }
+
+    .mnavbtn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      color: #475569;
+      font-weight: 500;
+      border-radius: 11px;
+      cursor: pointer;
+      font-size: 14px;
+      border: none;
+      background: none;
+      font-family: 'DM Sans', sans-serif;
+      margin-bottom: 3px
+    }
+
+    .mnavbtn:hover {
+      color: var(--b);
+      background: #f0f9ff
+    }
+
+    @media(max-width:960px) {
+      .nlinks {
+        display: none
+      }
+    }
+
+    @media(max-width:680px) {
+      .nright .nb-desktop {
+        display: none
+      }
+
+      .burger {
+        display: flex
+      }
+    }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0284c7 72%, #0ea5e9 100%);
+      padding: 110px 0 76px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 480px;
+      height: 480px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .04);
+      top: -180px;
+      right: -80px;
+      filter: blur(60px)
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .04);
+      bottom: -130px;
+      left: -80px;
+      filter: blur(60px)
+    }
+
+    .hero-c {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 760px;
+      margin: 0 auto
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 52px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.12;
+      margin-bottom: 16px
+    }
+
+    .hero h1 span {
+      color: #bae6fd
+    }
+
+    .hero-p {
+      font-size: 18px;
+      color: #bae6fd;
+      line-height: 1.7;
+      margin-bottom: 28px
+    }
+
+    .hero-p strong {
+      color: #fff
+    }
+
+    .tpill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, .15);
+      border: 1px solid rgba(255, 255, 255, .25);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 16px;
+      border-radius: 999px;
+      margin-bottom: 22px
+    }
+
+    .ldot {
+      width: 7px;
+      height: 7px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: lp 2s infinite
+    }
+
+    @keyframes lp {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, .4)
+      }
+
+      50% {
+        box-shadow: 0 0 0 9px rgba(74, 222, 128, 0)
+      }
+    }
+
+    .sbox {
+      background: #fff;
+      border-radius: 13px;
+      padding: 5px;
+      display: flex;
+      gap: 7px;
+      max-width: 580px;
+      margin: 26px auto 0;
+      box-shadow: 0 20px 56px rgba(0, 0, 0, .15)
+    }
+
+    .sbox input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 11px 15px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--dk);
+      border-radius: 9px
+    }
+
+    .htags {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px 22px;
+      margin-top: 22px;
+      color: #bae6fd;
+      font-size: 13px;
+      font-weight: 500
+    }
+
+    @media(max-width:640px) {
+      .hero {
+        padding: 96px 0 56px
+      }
+
+      .hero h1 {
+        font-size: 30px
+      }
+
+      .sbox {
+        flex-direction: column
+      }
+    }
+
+    /* STATS */
+    .statbar {
+      background: #0369a1;
+      padding: 44px 0
+    }
+
+    .sgrid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      text-align: center
+    }
+
+    .snum {
+      font-family: 'Playfair Display', serif;
+      font-size: 40px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1
+    }
+
+    .snum span {
+      color: #7dd3fc
+    }
+
+    .slbl {
+      color: #bae6fd;
+      font-weight: 500;
+      margin-top: 5px;
+      font-size: 13px
+    }
+
+    @media(max-width:600px) {
+      .sgrid {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .snum {
+        font-size: 28px
+      }
+    }
+
+    /* JOB CARD */
+    .jcard {
+      padding: 20px;
+      cursor: pointer
+    }
+
+    .jlogo {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 19px;
+      flex-shrink: 0
+    }
+
+    .jtit {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--dk);
+      transition: color .2s
+    }
+
+    .jcard:hover .jtit {
+      color: var(--b)
+    }
+
+    .jtags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 9px 0
+    }
+
+    .jtag {
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px
+    }
+
+    .jmeta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 9px 0
+    }
+
+    /* PAGE HERO */
+    .phero {
+      background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 40%, #0284c7 72%, #0ea5e9 100%);
+      padding: 96px 0 52px;
+      text-align: center
+    }
+
+    .phero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 40px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px
+    }
+
+    .phero p {
+      color: #bae6fd;
+      font-size: 16px;
+      max-width: 500px;
+      margin: 0 auto
+    }
+
+    @media(max-width:600px) {
+      .phero h1 {
+        font-size: 26px
+      }
+    }
+
+    /* CTA */
+    .ctab {
+      background: linear-gradient(135deg, #0284c7, #0c4a6e);
+      border-radius: 22px;
+      padding: 52px 32px;
+      text-align: center;
+      color: #fff
+    }
+
+    .ctab h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      margin-bottom: 12px
+    }
+
+    .ctab p {
+      color: #bae6fd;
+      font-size: 16px;
+      max-width: 460px;
+      margin: 0 auto 26px
+    }
+
+    /* AUTH MODAL */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      backdrop-filter: blur(4px)
+    }
+
+    .overlay.show {
+      display: flex
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 22px;
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0, 0, 0, .22);
+      animation: mIn .25s ease
+    }
+
+    @keyframes mIn {
+      from {
+        transform: scale(.9);
+        opacity: 0
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    .mhd {
+      background: linear-gradient(135deg, #0c4a6e, #0369a1);
+      padding: 28px 28px 22px;
+      text-align: center;
+      color: #fff
+    }
+
+    .mhd h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 23px;
+      margin-bottom: 5px
+    }
+
+    .mhd p {
+      color: #bae6fd;
+      font-size: 13px
+    }
+
+    .mbd {
+      padding: 24px 28px
+    }
+
+    .tabs {
+      display: flex;
+      background: #f8fafc;
+      border-radius: 11px;
+      padding: 3px;
+      margin-bottom: 20px
+    }
+
+    .tab {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      border-radius: 9px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      color: #64748b;
+      background: transparent;
+      transition: all .2s
+    }
+
+    .tab.on {
+      background: #fff;
+      color: var(--b);
+      box-shadow: 0 2px 7px rgba(0, 0, 0, .08)
+    }
+
+    .aerr {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      border-radius: 9px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+      line-height: 1.5
+    }
+
+    .aerr.on {
+      display: block
+    }
+
+    .fg {
+      margin-bottom: 13px
+    }
+
+    .fl {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 4px
+    }
+
+    .req {
+      color: #ef4444;
+      margin-left: 2px
+    }
+
+    .fi {
+      width: 100%;
+      border: 2px solid #e2e8f0;
+      border-radius: 11px;
+      padding: 12px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--dk);
+      background: #fff;
+      transition: all .2s;
+      outline: none
+    }
+
+    .fi:focus {
+      border-color: var(--b);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, .1)
+    }
+
+    .fi.err {
+      border-color: #ef4444
+    }
+
+    .fe {
+      color: #ef4444;
+      font-size: 11px;
+      margin-top: 3px;
+      display: none
+    }
+
+    .fe.on {
+      display: block
+    }
+
+    .lnkbtn {
+      background: none;
+      border: none;
+      color: var(--b);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      padding: 0;
+      text-decoration: underline
+    }
+
+    /* APPLY FORM */
+    .pwrap {
+      margin-bottom: 24px
+    }
+
+    .ptop {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 7px
+    }
+
+    .ptrack {
+      height: 9px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden
+    }
+
+    .pfill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--b), #0ea5e9);
+      border-radius: 999px;
+      transition: width .5s
+    }
+
+    .sdots {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px
+    }
+
+    .sdot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      width: 25%
+    }
+
+    .sdc {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .3s
+    }
+
+    .sdc.done {
+      background: var(--g);
+      color: #fff
+    }
+
+    .sdc.cur {
+      background: var(--b);
+      color: #fff
+    }
+
+    .sdc.up {
+      background: #e2e8f0;
+      color: #94a3b8
+    }
+
+    .sdl {
+      font-size: 10px;
+      font-weight: 600;
+      text-align: center
+    }
+
+    .sdl.cur {
+      color: var(--b)
+    }
+
+    .sdl.up {
+      color: #94a3b8
+    }
+
+    @media(max-width:460px) {
+      .sdl {
+        display: none
+      }
+    }
+
+    .popt {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      padding: 13px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: all .2s;
+      background: #fff;
+      margin-bottom: 9px;
+      width: 100%;
+      text-align: left;
+      font-family: 'DM Sans', sans-serif
+    }
+
+    .popt:hover {
+      border-color: #93c5fd;
+      background: #f0f9ff
+    }
+
+    .popt.sel {
+      border-color: var(--b);
+      background: #f0f9ff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, .12)
+    }
+
+    .picon {
+      font-size: 28px;
+      flex-shrink: 0;
+      margin-top: 2px
+    }
+
+    .plbl {
+      font-weight: 700;
+      color: var(--dk);
+      font-size: 13px
+    }
+
+    .pdsc {
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 3px;
+      line-height: 1.4
+    }
+
+    .pchk {
+      width: 18px;
+      height: 18px;
+      background: var(--b);
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 3px
+    }
+
+    .popt.sel .pchk {
+      display: flex
+    }
+
+    .ibox {
+      border-radius: 13px;
+      padding: 15px 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 11px
+    }
+
+    .ibl {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd
+    }
+
+    .igr {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0
+    }
+
+    /* SUCCESS */
+    .sckc {
+      width: 90px;
+      height: 90px;
+      background: var(--g);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      animation: pop .5s cubic-bezier(.34, 1.56, .64, 1);
+      box-shadow: 0 8px 28px rgba(16, 185, 129, .35)
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(0);
+        opacity: 0
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    /* FAQ */
+    .fqi {
+      border: 1px solid #e2e8f0;
+      border-radius: 13px;
+      overflow: hidden;
+      margin-bottom: 9px;
+      background: #fff
+    }
+
+    .fqq {
+      padding: 16px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--dk);
+      gap: 12px;
+      font-size: 14px
+    }
+
+    .fqq:hover {
+      background: #f8fafc
+    }
+
+    .fqic {
+      font-size: 19px;
+      color: var(--b);
+      flex-shrink: 0;
+      transition: transform .3s;
+      line-height: 1
+    }
+
+    .fqa {
+      padding: 0 20px 16px;
+      color: #475569;
+      line-height: 1.7;
+      display: none;
+      font-size: 14px
+    }
+
+    .fqi.open .fqa {
+      display: block
+    }
+
+    .fqi.open .fqic {
+      transform: rotate(45deg)
+    }
+
+    /* CHAT */
+    .cw {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 500
+    }
+
+    .cbtn {
+      width: 52px;
+      height: 52px;
+      background: var(--b);
+      border: none;
+      border-radius: 50%;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 5px 20px rgba(2, 132, 199, .45);
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: cr 3s ease-in-out infinite
+    }
+
+    @keyframes cr {
+
+      0%,
+      100% {
+        box-shadow: 0 5px 20px rgba(2, 132, 199, .45)
+      }
+
+      50% {
+        box-shadow: 0 5px 20px rgba(2, 132, 199, .45), 0 0 0 12px rgba(2, 132, 199, 0)
+      }
+    }
+
+    .cbtn:hover {
+      transform: scale(1.1)
+    }
+
+    .cbox {
+      width: 300px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 18px 56px rgba(0, 0, 0, .14);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      margin-bottom: 10px;
+      display: none
+    }
+
+    .cbox.open {
+      display: block
+    }
+
+    .chd {
+      background: var(--b);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .cmsgs {
+      height: 170px;
+      overflow-y: auto;
+      padding: 10px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 7px
+    }
+
+    .cm {
+      max-width: 82%;
+      padding: 8px 12px;
+      border-radius: 13px;
+      font-size: 13px;
+      line-height: 1.4
+    }
+
+    .cm.bot {
+      background: #fff;
+      color: var(--dk);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .07);
+      align-self: flex-start;
+      border-bottom-left-radius: 3px
+    }
+
+    .cm.usr {
+      background: var(--b);
+      color: #fff;
+      align-self: flex-end;
+      border-bottom-right-radius: 3px
+    }
+
+    .cin {
+      display: flex;
+      gap: 7px;
+      padding: 9px;
+      border-top: 1px solid #f1f5f9
+    }
+
+    .cin input {
+      flex: 1;
+      border: 1px solid #e2e8f0;
+      border-radius: 9px;
+      padding: 7px 11px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      outline: none
+    }
+
+    .cin input:focus {
+      border-color: var(--b)
+    }
+
+    .csend {
+      background: var(--b);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      padding: 7px 12px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer
+    }
+
+    .cwa {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      background: #25d366;
+      color: #fff;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 9px;
+      text-decoration: none
+    }
+
+    /* FOOTER */
+    .footer {
+      background: #0f172a;
+      color: #94a3b8
+    }
+
+    .ftop {
+      background: #0369a1;
+      padding: 36px 0
+    }
+
+    .fgrid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.5fr;
+      gap: 32px;
+      padding: 48px 0
+    }
+
+    .ftit {
+      color: #fff;
+      font-weight: 600;
+      margin-bottom: 12px;
+      font-size: 14px
+    }
+
+    .fl2 {
+      display: block;
+      color: #94a3b8;
+      font-size: 13px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      text-align: left;
+      font-family: 'DM Sans', sans-serif;
+      padding: 0;
+      transition: color .15s
+    }
+
+    .fl2:hover {
+      color: #38bdf8
+    }
+
+    .fbot {
+      border-top: 1px solid #1e293b;
+      padding: 16px 0
+    }
+
+    .fboti {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 12px
+    }
+
+    .soc {
+      width: 32px;
+      height: 32px;
+      background: #1e293b;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background .2s
+    }
+
+    .soc:hover {
+      background: var(--b)
+    }
+
+    @media(max-width:760px) {
+      .fgrid {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .fboti {
+        flex-direction: column;
+        text-align: center
+      }
+    }
+
+    @media(max-width:460px) {
+      .fgrid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    /* MISC */
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity .6s, transform .6s
+    }
+
+    .reveal.in {
+      opacity: 1;
+      transform: none
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-9px)
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 11px 22px;
+      border-radius: 11px;
+      font-weight: 600;
+      font-size: 13px;
+      z-index: 9999;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .2);
+      pointer-events: none;
+      white-space: nowrap;
+      color: #fff
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="wrap">
+      <div class="nav-inner">
+        <div class="nlogo" onclick="go('home')">
+          <div class="nbox">P</div>
+          <div>
+            <div class="nbrand">Prime<em>JobAxis</em></div>
+            <div class="nsub">Remote Jobs Worldwide</div>
+          </div>
+        </div>
+        <div class="nlinks">
+          <button class="nl on" id="nl-home" onclick="go('home')">Home</button>
+          <button class="nl" id="nl-jobs" onclick="go('jobs')">Find Jobs</button>
+          <button class="nl" id="nl-cats" onclick="go('cats')">Categories</button>
+          <button class="nl" id="nl-benefits" onclick="go('benefits')">Benefits</button>
+          <button class="nl" id="nl-about" onclick="go('about')">About</button>
+          <button class="nl" id="nl-blog" onclick="go('blog')">Blog</button>
+          <button class="nl" id="nl-contact" onclick="go('contact')">Contact</button>
+        </div>
+        <div class="nright">
+          <div id="nb-guest" style="display:flex;align-items:center;gap:8px">
+            <button class="btn bo bsm nb-desktop" onclick="openModal('login')">Sign In</button>
+            <button class="btn bb bsm" onclick="openModal('signup')">Create Account</button>
+          </div>
+          <div id="nb-user" style="display:none;position:relative">
+            <div class="upill" onclick="toggleDrop()">
+              <div class="uav" id="uav">U</div>
+              <span id="uname"
+                style="font-size:12px;font-weight:600;color:#0369a1;max-width:130px;overflow:hidden;text-overflow:ellipsis"></span>
+              <span style="color:#0284c7;font-size:11px">&#9660;</span>
+            </div>
+            <div class="udrop hidden" id="udrop">
+              <div style="padding:9px 13px;border-bottom:1px solid #f1f5f9;margin-bottom:4px">
+                <p style="font-size:11px;color:#94a3b8">Signed in as</p>
+                <p id="udrop-em" style="font-size:12px;font-weight:600;color:#0f172a;word-break:break-all"></p>
+              </div>
+              <button class="udrop-item" onclick="go('jobs');closeDrop()">&#x1F4BC; Browse Jobs</button>
+              <button class="udrop-item red" onclick="doSignOut()">&#x1F6AA; Sign Out</button>
+            </div>
+          </div>
+          <button class="burger" onclick="toggleBurger()"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+    </div>
+    <div class="mnav" id="mnav">
+      <button class="mnavbtn" onclick="go('home');closeBurger()">&#x1F3E0; Home</button>
+      <button class="mnavbtn" onclick="go('jobs');closeBurger()">&#x1F4BC; Find Jobs</button>
+      <button class="mnavbtn" onclick="go('cats');closeBurger()">&#x1F4C2; Categories</button>
+      <button class="mnavbtn" onclick="go('benefits');closeBurger()">&#x2B50; Benefits</button>
+      <button class="mnavbtn" onclick="go('about');closeBurger()">&#x2139;&#xFE0F; About</button>
+      <button class="mnavbtn" onclick="go('blog');closeBurger()">&#x1F4DD; Blog</button>
+      <button class="mnavbtn" onclick="go('contact');closeBurger()">&#x1F4DE; Contact</button>
+      <div id="nb-mob-guest">
+        <button class="btn bb bfull mt2" onclick="openModal('signup');closeBurger()">&#x1F680; Create Free
+          Account</button>
+        <button class="btn bo bfull mt1" style="margin-top:8px" onclick="openModal('login');closeBurger()">Sign
+          In</button>
+      </div>
+      <div id="nb-mob-user" style="display:none">
+        <button class="btn bo bfull mt2" onclick="doSignOut();closeBurger()">&#x1F6AA; Sign Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- AUTH MODAL -->
+  <div class="overlay" id="overlay" onclick="closeModalBg(event)">
+    <div class="modal">
+      <div class="mhd">
+        <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px">
+          <div class="nbox" style="width:30px;height:30px;font-size:15px">P</div>
+          <span class="sf" style="font-size:18px;color:#fff">Prime<em
+              style="color:#bae6fd;font-style:normal">JobAxis</em></span>
+        </div>
+        <h2 id="m-title">Create Your Free Account</h2>
+        <p id="m-sub">Join 92,000+ people who found remote work</p>
+      </div>
+      <div class="mbd">
+        <div class="tabs" id="m-tabs">
+          <button class="tab on" id="t-signup" onclick="mTab('signup')">&#x1F680; Sign Up</button>
+          <button class="tab" id="t-login" onclick="mTab('login')">&#x1F511; Sign In</button>
+        </div>
+        <div class="aerr" id="aerr"></div>
+
+        <!-- SIGN UP -->
+        <div id="f-signup">
+          <div class="fg"><label class="fl">Email Address <span class="req">*</span></label><input class="fi" id="su-em"
+              type="email" placeholder="you@email.com">
+            <div class="fe" id="su-em-e">Please enter a valid email address</div>
+          </div>
+          <div class="fg"><label class="fl">Password <span class="req">*</span> <span
+                style="color:#94a3b8;font-weight:400;font-size:11px">(min 6 characters)</span></label><input class="fi"
+              id="su-pw" type="password" placeholder="Create a strong password">
+            <div class="fe" id="su-pw-e">Password must be at least 6 characters</div>
+          </div>
+          <div class="fg"><label class="fl">Confirm Password <span class="req">*</span></label><input class="fi"
+              id="su-pw2" type="password" placeholder="Type your password again">
+            <div class="fe" id="su-pw2-e">Passwords do not match</div>
+          </div>
+          <button class="btn bb bfull" id="su-btn" onclick="doSignUp()">Create Free Account &#x2192;</button>
+          <div class="ibox ibl" style="margin-top:13px;padding:10px 14px"><span style="font-size:18px">&#x1F512;</span>
+            <p style="font-size:11px;color:#0369a1;font-weight:500;line-height:1.5">Your data is encrypted and secure.
+              We never share your details.</p>
+          </div>
+        </div>
+
+        <!-- SIGN IN -->
+        <div id="f-login" class="hidden">
+          <div class="fg"><label class="fl">Email Address <span class="req">*</span></label><input class="fi" id="li-em"
+              type="email" placeholder="you@email.com"></div>
+          <div class="fg"><label class="fl">Password <span class="req">*</span></label><input class="fi" id="li-pw"
+              type="password" placeholder="Your password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+          <div style="text-align:right;margin-bottom:16px;margin-top:-6px"><button class="lnkbtn"
+              onclick="mTab('forgot')">Forgot password?</button></div>
+          <button class="btn bb bfull" id="li-btn" onclick="doLogin()">Sign In &#x2192;</button>
+        </div>
+
+        <!-- FORGOT -->
+        <div id="f-forgot" class="hidden">
+          <p style="color:#475569;font-size:13px;line-height:1.6;margin-bottom:15px">Enter your email and we will send
+            you a link to reset your password.</p>
+          <div class="fg"><label class="fl">Email Address <span class="req">*</span></label><input class="fi" id="fp-em"
+              type="email" placeholder="you@email.com"></div>
+          <button class="btn bb bfull" id="fp-btn" onclick="doReset()">Send Reset Link &#x2192;</button>
+          <div style="text-align:center;margin-top:12px"><button class="lnkbtn" onclick="mTab('login')">&#x2190; Back to
+              Sign In</button></div>
+        </div>
+
+        <!-- RESET SENT -->
+        <div id="f-resent" class="hidden" style="text-align:center;padding:16px 0">
+          <div style="font-size:44px;margin-bottom:12px">&#x1F4E7;</div>
+          <h3 class="sf" style="font-size:19px;margin-bottom:8px">Reset Link Sent!</h3>
+          <p style="color:#475569;font-size:13px;line-height:1.6">Check your email inbox and spam folder for the
+            password reset link.</p>
+          <button class="btn bb bfull mt3" onclick="mTab('login')">Back to Sign In</button>
+        </div>
+
+        <button onclick="closeModal()"
+          style="display:block;text-align:center;width:100%;margin-top:14px;background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="page active" id="p-home">
+    <section class="hero">
+      <div class="wrap">
+        <div class="hero-c">
+          <div class="tpill">
+            <div class="ldot"></div>12,000+ People Hired Worldwide
+          </div>
+          <h1>Your Dream<br><span>Remote Job</span> Starts Here</h1>
+          <p class="hero-p">Get access to trusted remote job opportunities from top companies worldwide, work from your
+            phone or laptop from anywhere of your choice.<br><br><strong>100% free to apply.
+              No experience needed.</strong></p>
+          <div class="brow" id="hero-btns">
+            <button class="btn bw blg" onclick="go('jobs')">&#x1F680; Browse Jobs Free</button>
+          </div><br>
+          <div class="sbox"><input type="text" placeholder="Search jobs e.g. data entry, typing, VA..."
+              onkeydown="if(event.key==='Enter')go('jobs')"><button class="btn bb" onclick="go('jobs')">Search</button>
+          </div>
+          <div class="htags"><span>&#x2705; Free To Apply</span><span>&#x2705; No Experience Needed</span><span>&#x2705;
+              Work From Anywhere</span><span>&#x2705; Get Paid Weekly</span></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- Welcome banner: only shown when user is logged in -->
+    <div id="welcome-banner" style="display:none;background:#f0fdf4;border-bottom:2px solid #bbf7d0;padding:14px 20px">
+      <div class="wrap" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:22px">&#x1F44B;</span>
+        <div>
+          <p style="font-weight:700;color:#15803d;font-size:14px">Welcome back! You are signed in.</p>
+          <p style="color:#16a34a;font-size:12px;margin-top:2px">Browse jobs below and click Apply — your account is
+            ready.</p>
+        </div>
+        <button class="btn" style="background:#10b981;color:#fff;margin-left:auto;padding:9px 18px;font-size:13px"
+          onclick="go('jobs')">Apply-Now &#x2192;</button>
+      </div>
+    </div>
+
+    <section class="statbar">
+      <div class="wrap">
+        <div class="sgrid">
+          <div>
+            <div class="snum" data-to="2000">0<span>+</span></div>
+            <div class="slbl">Jobs Posted</div>
+          </div>
+          <div>
+            <div class="snum" data-to="60">0<span>+</span></div>
+            <div class="slbl">Countries Served</div>
+          </div>
+          <div>
+            <div class="snum" data-to="1200">0<span>+</span></div>
+            <div class="slbl">Applicants Hired</div>
+          </div>
+          <div>
+            <div class="snum" data-to="98">0<span>%</span></div>
+            <div class="slbl">Satisfaction Rate</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" style="background:#fff">
+      <div class="wrap">
+        <div class="tc reveal mb3">
+          <div class="lbl">How It Works</div>
+          <h2 class="h2">Start Earning in 3 Easy Steps</h2>
+          <p class="sub" style="max-width:460px;margin:10px auto 0">No resume. No stress. Just apply and our team will
+            reach out after review.</p>
+        </div>
+        <div class="g3">
+          <div class="card ch tc reveal" style="padding:34px 22px">
+            <div style="font-size:42px;margin-bottom:6px">&#x1F50D;</div>
+            <div class="sf" style="font-size:56px;color:#e0f2fe;font-weight:700;line-height:1;margin-bottom:7px">01
+            </div>
+            <h3 class="sf" style="font-size:18px;margin-bottom:9px">Browse Jobs</h3>
+            <p style="color:#64748b;line-height:1.7;font-size:13px">Explore our remote jobs. Filter by category or
+              salary. Find your perfect fit.</p>
+          </div>
+          <div class="card ch tc reveal" style="padding:34px 22px">
+            <div style="font-size:42px;margin-bottom:6px">&#x1F4DD;</div>
+            <div class="sf" style="font-size:56px;color:#e0f2fe;font-weight:700;line-height:1;margin-bottom:7px">02
+            </div>
+            <h3 class="sf" style="font-size:18px;margin-bottom:9px" id="step2-title">Create Account &amp; Apply</h3>
+            <p style="color:#64748b;line-height:1.7;font-size:13px" id="step2-desc">Sign up with just email and
+              password, then fill our simple 4-step form.</p>
+          </div>
+          <div class="card ch tc reveal" style="padding:34px 22px">
+            <div style="font-size:42px;margin-bottom:6px">&#x1F4F1;</div>
+            <div class="sf" style="font-size:56px;color:#e0f2fe;font-weight:700;line-height:1;margin-bottom:7px">03
+            </div>
+            <h3 class="sf" style="font-size:18px;margin-bottom:9px">Get Hired</h3>
+            <p style="color:#64748b;line-height:1.7;font-size:13px">We review your application and contact you within
+              1-3 business days by email or phone.</p>
+          </div>
+        </div>
+        <div class="tc mt4"><button class="btn bb blg" onclick="go('jobs')">&#x1F3AF; Browse All Jobs</button></div>
+      </div>
+    </section>
+
+    <section class="sec" style="background:#f8fafc">
+      <div class="wrap">
+        <div class="tc reveal mb3">
+          <div class="lbl">Categories</div>
+          <h2 class="h2">What Kind of Work Do You Want?</h2>
+        </div>
+        <div class="g4" id="h-cats"></div>
+      </div>
+    </section>
+
+    <section class="sec" style="background:#fff">
+      <div class="wrap">
+        <div
+          style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:28px">
+          <div>
+            <div class="lbl">Featured</div>
+            <h2 class="h2">Hot Remote Jobs</h2>
+          </div>
+          <button class="btn bo" onclick="go('jobs')">View All &#x2192;</button>
+        </div>
+        <div class="g2" id="h-jobs"></div>
+        <div class="tc mt4"><button class="btn bb blg" onclick="go('jobs')">See All Jobs &#x2192;</button></div>
+      </div>
+    </section>
+
+    <section class="sec" style="background:linear-gradient(135deg,#0c4a6e,#0369a1)">
+      <div class="wrap">
+        <div class="tc reveal mb3">
+          <div class="lbl" style="color:#7dd3fc">Why Choose Us</div>
+          <h2 class="h2 tw">The PrimeJobAxis Advantage</h2>
+        </div>
+        <div class="g3" style="gap:16px">
+          <div
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:24px">
+            <div style="font-size:34px;margin-bottom:11px">&#x1F193;</div>
+            <h3 style="color:#fff;font-weight:700;margin-bottom:6px;font-size:15px">Completely Free</h3>
+            <p style="color:#bae6fd;font-size:13px;line-height:1.7">Zero fees at every step. No hidden charges, ever.
+            </p>
+          </div>
+          <div
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:24px">
+            <div style="font-size:34px;margin-bottom:11px">&#x1F30D;</div>
+            <h3 style="color:#fff;font-weight:700;margin-bottom:6px;font-size:15px">Global Reach</h3>
+            <p style="color:#bae6fd;font-size:13px;line-height:1.7">Jobs from 40+ countries, open to applicants from
+              138+ nations.</p>
+          </div>
+          <div
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:24px">
+            <div style="font-size:34px;margin-bottom:11px">&#x26A1;</div>
+            <h3 style="color:#fff;font-weight:700;margin-bottom:6px;font-size:15px">Fast Response</h3>
+            <p style="color:#bae6fd;font-size:13px;line-height:1.7">We contact qualified applicants within 1-3 business
+              days.</p>
+          </div>
+          <div
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:24px">
+            <div style="font-size:34px;margin-bottom:11px">&#x1F393;</div>
+            <h3 style="color:#fff;font-weight:700;margin-bottom:6px;font-size:15px">No Experience Needed</h3>
+            <p style="color:#bae6fd;font-size:13px;line-height:1.7">We partner with employers who train new staff from
+              scratch.</p>
+          </div>
+          <div
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:24px">
+            <div style="font-size:34px;margin-bottom:11px">&#x1F4F1;</div>
+            <h3 style="color:#fff;font-weight:700;margin-bottom:6px;font-size:15px">Mobile Friendly</h3>
+            <p style="color:#bae6fd;font-size:13px;line-height:1.7">Apply and work from your phone. No laptop required
+              for most jobs.</p>
+          </div>
+          <div
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:24px">
+            <div style="font-size:34px;margin-bottom:11px">&#x1F512;</div>
+            <h3 style="color:#fff;font-weight:700;margin-bottom:6px;font-size:15px">Safe &amp; Legitimate</h3>
+            <p style="color:#bae6fd;font-size:13px;line-height:1.7">Every listing is verified. We never ask for payment
+              or bank info.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" style="background:#f8fafc">
+      <div class="wrap">
+        <div class="tc reveal mb3">
+          <div class="lbl">Testimonials</div>
+          <h2 class="h2">What Our Members Say</h2>
+        </div>
+        <div class="g2" id="h-reviews"></div>
+      </div>
+    </section>
+
+    <section class="sec" style="background:#fff">
+      <div class="wrap reveal">
+        <div class="ctab">
+          <h2>Your Remote Career Starts Now</h2>
+          <p>Join 12,000+ people who found legitimate online work. Free. Beginner friendly.</p>
+          <div class="brow mt4">
+            <button class="btn bw blg" onclick="go('jobs')">&#x1F680; Browse Jobs Free</button>
+            <button class="btn bg blg" id="cta-auth-btn" onclick="heroAuthClick()">&#x1F511; Create Free
+              Account</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- FIND JOBS -->
+  <div class="page" id="p-jobs">
+    <div class="phero">
+      <h1>Find Your Remote Job</h1>
+      <p>Verified positions. 100% free to apply. Work from anywhere.</p>
+    </div>
+    <div style="background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:64px;z-index:100">
+      <div class="wrap" style="padding:13px 20px">
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <input type="text" id="js" class="fi" style="flex:1;min-width:160px;padding:10px 14px"
+            placeholder="Search job title or keyword..." oninput="filterJobs()">
+          <select id="jc" class="fi" style="width:175px;padding:10px 14px" onchange="filterJobs()">
+            <option value="">All Categories</option>
+            <option value="data-entry">Data Entry</option>
+            <option value="customer-support">Customer Support</option>
+            <option value="virtual-assistant">Virtual Assistant</option>
+            <option value="typing">Typing Jobs</option>
+            <option value="freelance">Freelance</option>
+            <option value="work-from-home">Work From Home</option>
+            <option value="entry-level">Entry Level</option>
+          </select>
+          <select id="jt" class="fi" style="width:144px;padding:10px 14px" onchange="filterJobs()">
+            <option value="">All Types</option>
+            <option>Full-Time</option>
+            <option>Part-Time</option>
+            <option>Freelance</option>
+            <option>Flexible</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <section class="sec" style="background:#f8fafc">
+      <div class="wrap">
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:7px">
+          <p id="jcnt" style="color:#475569;font-weight:500;font-size:14px"></p>
+          <button
+            onclick="document.getElementById('js').value='';document.getElementById('jc').value='';document.getElementById('jt').value='';filterJobs()"
+            style="font-size:12px;color:#94a3b8;background:none;border:none;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif">Clear
+            filters</button>
+        </div>
+        <div class="g2" id="jgrid"></div>
+        <div id="jnone" class="hidden tc" style="padding:64px 0">
+          <div style="font-size:52px;margin-bottom:13px">&#x1F50D;</div>
+          <h3 class="sf" style="font-size:21px;margin-bottom:9px">No jobs found</h3>
+          <p style="color:#64748b;margin-bottom:16px;font-size:14px">Try adjusting your search filters.</p>
+          <button class="btn bb"
+            onclick="document.getElementById('js').value='';document.getElementById('jc').value='';document.getElementById('jt').value='';filterJobs()">View
+            All Jobs</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- APPLY FORM -->
+  <div class="page" id="p-apply">
+    <div style="padding-top:64px;min-height:100vh;background:#f8fafc">
+      <div class="wrap" style="max-width:620px;padding-top:32px;padding-bottom:44px">
+        <div class="card" id="a-hdr" style="padding:16px;margin-bottom:16px;display:none"></div>
+        <div class="card" style="padding:28px 32px">
+          <div class="pwrap">
+            <div class="ptop">
+              <span style="font-size:12px;font-weight:600" id="slbl">Step 1 of 4</span>
+              <span style="font-size:12px;color:#94a3b8" id="spct">0% complete</span>
+            </div>
+            <div class="ptrack">
+              <div class="pfill" id="pbar" style="width:0%"></div>
+            </div>
+            <div class="sdots">
+              <div class="sdot">
+                <div class="sdc cur" id="d1">1</div>
+                <div class="sdl cur">Personal</div>
+              </div>
+              <div class="sdot">
+                <div class="sdc up" id="d2">2</div>
+                <div class="sdl up">Skills</div>
+              </div>
+              <div class="sdot">
+                <div class="sdc up" id="d3">3</div>
+                <div class="sdl up">Job Prefs</div>
+              </div>
+              <div class="sdot">
+                <div class="sdc up" id="d4">4</div>
+                <div class="sdl up">Payment</div>
+              </div>
+            </div>
+          </div>
+          <div class="ibox ibl mb3"><span style="font-size:20px">&#x1F512;</span>
+            <p style="font-size:12px;font-weight:500;color:#0369a1;line-height:1.5">Your information is 100% private and
+              secure. We never share your details.</p>
+          </div>
+          <!-- STEP 1 -->
+          <div id="s1">
+            <h2 class="sf" style="font-size:22px;margin-bottom:18px">Personal Information</h2>
+            <div class="fg"><label class="fl">Full Name <span class="req">*</span></label><input class="fi" id="a-name"
+                placeholder="John Doe">
+              <div class="fe" id="e-name">Full name is required</div>
+            </div>
+            <div class="fg"><label class="fl">Email Address <span class="req">*</span></label><input class="fi"
+                id="a-email" type="email" placeholder="you@email.com">
+              <div class="fe" id="e-email">Valid email required</div>
+            </div>
+            <div class="fg"><label class="fl">Phone Number <span class="req">*</span></label><input class="fi"
+                id="a-phone" type="tel" placeholder="+1 234 567 8900">
+              <div class="fe" id="e-phone">Phone number is required</div>
+            </div>
+            <div class="fg"><label class="fl">Street Address <span class="req">*</span></label><input class="fi"
+                id="a-street" placeholder="e.g. 123 Main Street, Apt 4B">
+              <div class="fe" id="e-street">Street address is required</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="fg"><label class="fl">City <span class="req">*</span></label><input class="fi" id="a-city"
+                  placeholder="e.g. New York">
+                <div class="fe" id="e-city">City is required</div>
+              </div>
+              <div class="fg"><label class="fl">State / Province</label><input class="fi" id="a-state"
+                  placeholder="e.g. Canada State"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="fg"><label class="fl">ZIP / Postal Code</label><input class="fi" id="a-zip"
+                  placeholder="e.g. 10001"></div>
+              <div class="fg">
+  <label class="fl">Country <span class="req">*</span></label>
+  <select class="fi" id="a-country" required>
+    <option value="">Select Country</option>
+    <option value="United States">United States</option>
+    <option value="United Kingdom">United Kingdom</option>
+    <option value="Canada">Canada</option>
+    <option value="Australia">Australia</option>
+    <option value="Germany">Germany</option>
+  </select>
+  <div class="fe" id="e-country">Country is required</div>
+</div>
+            </div>
+
+          </div>
+
+          <!-- STEP 2 -->
+          <div id="s2" class="hidden">
+            <h2 class="sf" style="font-size:22px;margin-bottom:18px">Your Qualifications</h2>
+            <div class="fg">
+              <label class="fl">Date of Birth <span class="req">*</span></label>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div>
+                  <input class="fi" id="a-dob-m" placeholder="MM" maxlength="2" inputmode="numeric"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'');if(this.value.length===2)document.getElementById('a-dob-d').focus()"
+                    style="text-align:center;font-size:16px;font-weight:600">
+                  <div style="text-align:center;font-size:10px;color:#94a3b8;margin-top:3px;font-weight:600">MONTH</div>
+                </div>
+                <div>
+                  <input class="fi" id="a-dob-d" placeholder="DD" maxlength="2" inputmode="numeric"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'');if(this.value.length===2)document.getElementById('a-dob-y').focus()"
+                    style="text-align:center;font-size:16px;font-weight:600">
+                  <div style="text-align:center;font-size:10px;color:#94a3b8;margin-top:3px;font-weight:600">DAY</div>
+                </div>
+                <div>
+                  <input class="fi" id="a-dob-y" placeholder="YYYY" maxlength="4" inputmode="numeric"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                    style="text-align:center;font-size:16px;font-weight:600">
+                  <div style="text-align:center;font-size:10px;color:#94a3b8;margin-top:3px;font-weight:600">YEAR</div>
+                </div>
+              </div>
+              <div class="fe" id="e-age">Please enter a valid date of birth (must be 18 or older)</div>
+            </div>
+            <div class="fg"><label class="fl">English Proficiency <span class="req">*</span></label>
+              <select class="fi" id="a-eng">
+                <option value="">— Select —</option>
+                <option>Beginner (Basic understanding)</option>
+                <option>Intermediate (Can communicate clearly)</option>
+                <option>Advanced (Fluent in reading &amp; writing)</option>
+                <option>Native / Bilingual</option>
+              </select>
+              <div class="fe" id="e-eng">Select your English level</div>
+            </div>
+            <div class="fg"><label class="fl">Primary Work Device <span class="req">*</span></label>
+              <select class="fi" id="a-dev">
+                <option value="">— Select —</option>
+                <option>Mobile Phone (Android)</option>
+                <option>Mobile Phone (iPhone)</option>
+                <option>Laptop (Windows)</option>
+                <option>Laptop (Mac)</option>
+                <option>Desktop Computer</option>
+                <option>Tablet / iPad</option>
+              </select>
+              <div class="fe" id="e-dev">Select a device type</div>
+            </div>
+            <div class="fg"><label class="fl">Internet Access <span class="req">*</span></label>
+              <select class="fi" id="a-net">
+                <option value="">— Select —</option>
+                <option>High-speed broadband (Fiber / Cable)</option>
+                <option>Standard broadband (DSL / Wi-Fi)</option>
+                <option>Mobile data (4G / 5G)</option>
+                <option>Shared / Public Wi-Fi</option>
+              </select>
+              <div class="fe" id="e-net">Select internet access type</div>
+            </div>
+            <div class="fg"><label class="fl">Experience Level</label>
+              <select class="fi" id="a-exp">
+                <option value="">— Select —</option>
+                <option>No Experience (Complete Beginner)</option>
+                <option>Less than 1 Year</option>
+                <option>1–2 Years</option>
+                <option>3–5 Years</option>
+                <option>5+ Years</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div id="s3" class="hidden">
+            <h2 class="sf" style="font-size:22px;margin-bottom:18px">Job Preferences</h2>
+            <div class="fg"><label class="fl">Preferred Job Category <span class="req">*</span></label>
+              <select class="fi" id="a-cat">
+                <option value="">— Select —</option>
+                <option value="remote">Remote Jobs</option>
+                <option value="data-entry">Data Entry</option>
+                <option value="customer-support">Customer Support</option>
+                <option value="virtual-assistant">Virtual Assistant</option>
+                <option value="typing">Typing Jobs</option>
+                <option value="freelance">Freelance Jobs</option>
+                <option value="work-from-home">Work From Home</option>
+                <option value="entry-level">Entry Level</option>
+              </select>
+              <div class="fe" id="e-cat">Select a job category</div>
+            </div>
+            <div class="fg">
+              <label class="fl">Short Introduction <span class="req">*</span></label>
+              <textarea class="fi" id="a-intro" rows="5"
+                placeholder="Tell us about yourself and why you would be great for remote work..."
+                oninput="document.getElementById('intc').textContent=this.value.length+' chars'"></textarea>
+              <div style="display:flex;justify-content:space-between;margin-top:3px">
+                <div class="fe" id="e-intro">Please write at least 30 characters</div>
+                <span style="font-size:11px;color:#94a3b8;margin-left:auto" id="intc">0 chars</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 4 -->
+          <div id="s4" class="hidden">
+            <h2 class="sf" style="font-size:22px;margin-bottom:6px">Preferred Payment Method</h2>
+            <p style="color:#64748b;font-size:13px;line-height:1.5;margin-bottom:18px"><strong style="color:#0f172a">No
+                account numbers collected here.</strong> Our finance team will contact you securely after approval.</p>
+            <button type="button" class="popt" id="pp1" onclick="pickPay('bank-ach','pp1')">
+              <div class="picon">🏦</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="plbl">Bank Transfer
+                    (ACH)</span><span class="bdg bbl" style="font-size:10px">Most Popular</span></div>
+                <div class="pdsc">Direct deposit to your bank account. Fast, secure, and free.</div>
+              </div>
+              <div class="pchk"><svg width="10" height="10" fill="none" stroke="white" stroke-width="3"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg></div>
+            </button>
+            <button type="button" class="popt" id="pp2" onclick="pickPay('mobile-deposit','pp2')">
+              <div class="picon">📱</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="plbl">Mobile
+                    Deposit</span><span class="bdg bgr" style="font-size:10px">Easy &amp; Fast</span></div>
+                <div class="pdsc">Receive payment via mobile banking app. Works with most major banks.</div>
+              </div>
+              <div class="pchk"><svg width="10" height="10" fill="none" stroke="white" stroke-width="3"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg></div>
+            </button>
+            <button type="button" class="popt" id="pp3" onclick="pickPay('credit-card','pp3')">
+              <div class="picon">💳</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="plbl">Credit Card
+                    Payment</span><span class="bdg bpu" style="font-size:10px">Instant</span></div>
+                <div class="pdsc">Funds loaded directly to your Visa or Mastercard prepaid account.</div>
+              </div>
+              <div class="pchk"><svg width="10" height="10" fill="none" stroke="white" stroke-width="3"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg></div>
+            </button>
+            <button type="button" class="popt" id="pp4" onclick="pickPay('cryptocurrency','pp4')">
+              <div class="picon">₿</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span
+                    class="plbl">Cryptocurrency</span><span class="bdg bgy" style="font-size:10px">Optional</span></div>
+                <div class="pdsc">Receive in Bitcoin, USDT, or other major cryptocurrencies.</div>
+              </div>
+              <div class="pchk"><svg width="10" height="10" fill="none" stroke="white" stroke-width="3"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg></div>
+            </button>
+            <div class="fe" id="e-pay" style="margin-top:4px">⚠ Please select a payment method</div>
+            <div class="fg mt2" id="pnw" style="display:none">
+              <label class="fl">Payment Notes <span style="color:#94a3b8;font-weight:400">(optional)</span></label>
+              <textarea class="fi" id="a-pnote" rows="2"></textarea>
+            </div>
+            <div class="ibox igr mt3">
+              <span style="font-size:20px">🔐</span>
+              <div>
+                <p style="font-weight:700;color:#166534;font-size:12px;margin-bottom:5px">Your Payment Information is
+                  Protected</p>
+                <ul style="color:#15803d;font-size:12px;line-height:1.8">
+                  <li>✅ <strong>No account numbers collected on this form</strong></li>
+                  <li>✅ Finance team contacts you securely after approval</li>
+                  <li>✅ Your data is encrypted and never shared</li>
+                </ul>
+              </div>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:13px;padding:16px;margin-top:18px">
+              <p style="font-weight:700;font-size:12px;margin-bottom:11px">📋 Application Summary</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:12px" id="asum"></div>
+            </div>
+          </div>
+
+
+          <!-- Nav buttons -->
+          <div
+            style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:18px;border-top:1px solid #f1f5f9">
+            <button class="btn bo" id="btn-back" onclick="stepBack()" style="display:none">&#x2190; Back</button>
+            <div style="flex:1"></div>
+            <button class="btn bb blg" id="btn-next" onclick="stepNext()">Continue &#x2192;</button>
+            <button class="btn bb blg hidden" id="btn-sub" onclick="submitForm()">&#x1F680; Submit Application</button>
+          </div>
+        </div>
+        <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:12px">&#x1F512; Secured by PrimeJobAxis
+          &bull; Your data is private and encrypted</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="page" id="p-success">
+    <div
+      style="min-height:100vh;background:linear-gradient(135deg,#f0f9ff,#fff,#f0fdf4);display:flex;align-items:center;justify-content:center;padding:72px 16px">
+      <div style="max-width:520px;width:100%;text-align:center">
+        <div class="sckc"><svg width="48" height="48" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg></div>
+        <div class="card" style="padding:32px">
+          <h1 class="sf" style="font-size:26px;margin-bottom:10px">Application Submitted! &#x1F389;</h1>
+          <p style="color:#475569;font-size:15px;line-height:1.7;margin-bottom:22px">Thank you! Our recruitment team
+            will <strong style="color:#0284c7">contact you within 1-3 business days</strong> to let you know if you
+            qualify for the job.</p>
+          <div class="ibox ibl mb2"><span style="font-size:28px">&#x1F4F1;</span>
+            <div>
+              <p style="font-weight:700;color:#0369a1;margin-bottom:4px;font-size:14px">Keep your phone and email ready!
+              </p>
+              <p style="color:#0284c7;font-size:12px;line-height:1.6">You will receive a call, SMS, or email from our
+                team. Check your <strong>inbox and spam folder</strong> for updates from PrimeJobAxis.</p>
+            </div>
+          </div>
+          <div class="ibox igr mb3"><span style="font-size:22px">&#x1F510;</span>
+            <div>
+              <p style="font-weight:700;color:#166534;font-size:12px;margin-bottom:4px">About Your Payment Method</p>
+              <p style="color:#15803d;font-size:12px;line-height:1.5">If approved, our finance team will contact you
+                securely to set up your payout. Your data is encrypted and never shared.</p>
+            </div>
+          </div>
+          <div style="text-align:left;margin-bottom:20px">
+            <p style="font-weight:700;color:#0f172a;margin-bottom:11px;font-size:14px">What happens next:</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div
+                style="display:flex;align-items:center;gap:11px;background:#f8fafc;border-radius:11px;padding:11px 15px">
+                <span style="font-size:17px">&#x1F4CB;</span><span
+                  style="font-size:13px;font-weight:500;color:#334155">Our team reviews your application
+                  carefully</span>
+              </div>
+              <div
+                style="display:flex;align-items:center;gap:11px;background:#f8fafc;border-radius:11px;padding:11px 15px">
+                <span style="font-size:17px">&#x1F4DE;</span><span
+                  style="font-size:13px;font-weight:500;color:#334155">We call or email you within 1-3 business
+                  days</span>
+              </div>
+              <div
+                style="display:flex;align-items:center;gap:11px;background:#f8fafc;border-radius:11px;padding:11px 15px">
+                <span style="font-size:17px">&#x2705;</span><span
+                  style="font-size:13px;font-weight:500;color:#334155">If qualified, we send your offer and start
+                  date</span>
+              </div>
+              <div
+                style="display:flex;align-items:center;gap:11px;background:#f8fafc;border-radius:11px;padding:11px 15px">
+                <span style="font-size:17px">&#x1F4BC;</span><span
+                  style="font-size:13px;font-weight:500;color:#334155">You start working remotely and earn from day
+                  one!</span>
+              </div>
+            </div>
+          </div>
+          <div class="brow"><button class="btn bo" onclick="go('jobs')">Browse More Jobs</button><button class="btn bb"
+              onclick="go('home')">Back to Home &#x2192;</button></div>
+        </div>
+        <p style="color:#94a3b8;font-size:12px;margin-top:16px">Questions? <a href="mailto:info@primejobaxis.com"
+            style="color:#0284c7">info@primejobaxis.com</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="page" id="p-cats">
+    <div class="phero">
+      <h1>Job Categories</h1>
+      <p>Choose the type of work that suits your skills and schedule.</p>
+    </div>
+    <section class="sec" style="background:#f8fafc">
+      <div class="wrap">
+        <div class="g2" id="cats-g"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ABOUT -->
+  <div class="page" id="p-about">
+    <div class="phero">
+      <h1>About PrimeJobAxis</h1>
+      <p>Connecting people worldwide to legitimate remote work.</p>
+    </div>
+    <section class="sec" style="background:#fff">
+      <div class="wrap" style="max-width:840px">
+        <div class="g2" style="align-items:center;gap:52px;margin-bottom:52px">
+          <div>
+            <h2 class="h2 mb2">Our Story</h2>
+            <div style="display:flex;flex-direction:column;gap:13px;color:#475569;line-height:1.8;font-size:14px">
+              <p>PrimeJobAxis was founded with one simple mission: make quality remote work accessible to
+                <em>everyone</em>, regardless of experience, location, or education.
+              </p>
+              <p>We saw thousands of talented people struggling to find flexible online jobs. So we built PrimeJobAxis
+                to bridge the gap between global companies and people who want to earn from home.</p>
+              <p>Today we have helped <strong style="color:#0f172a">7,000+ people</strong> across <strong
+                  style="color:#0f172a">60+ countries</strong> find stable, legitimate online employment.</p>
+            </div>
+          </div>
+          <div
+            style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:22px;padding:44px;text-align:center">
+            <div style="font-size:68px;margin-bottom:12px">&#x1F30D;</div>
+            <p class="sf" style="font-size:24px;color:#0369a1;margin-bottom:7px">Global Reach</p>
+            <p style="color:#0284c7;font-size:13px">Jobs from 40+ countries open to applicants from 38 nations.</p>
+          </div>
+        </div>
+        <div class="g3 mb5">
+          <div class="card" style="padding:26px;text-align:center">
+            <div style="font-size:34px;margin-bottom:12px">&#x1F3AF;</div>
+            <h3 class="sf" style="font-size:18px;margin-bottom:9px">Our Mission</h3>
+            <p style="color:#64748b;line-height:1.7;font-size:13px">Free, accessible, legitimate remote work for
+              everyone regardless of background.</p>
+          </div>
+          <div class="card" style="padding:26px;text-align:center">
+            <div style="font-size:34px;margin-bottom:12px">&#x1F441;&#xFE0F;</div>
+            <h3 class="sf" style="font-size:18px;margin-bottom:9px">Our Vision</h3>
+            <p style="color:#64748b;line-height:1.7;font-size:13px">A world where anyone with a device and internet can
+              earn a dignified income.</p>
+          </div>
+          <div class="card" style="padding:26px;text-align:center">
+            <div style="font-size:34px;margin-bottom:12px">&#x1F48E;</div>
+            <h3 class="sf" style="font-size:18px;margin-bottom:9px">Our Values</h3>
+            <p style="color:#64748b;line-height:1.7;font-size:13px">Transparency, integrity, and genuine care for every
+              applicant who trusts us.</p>
+          </div>
+        </div>
+        <div class="ctab">
+          <h2>Join the PrimeJobAxis Family</h2>
+          <p>12,000+ people found their remote career here. You are next.</p><button class="btn bw blg mt4"
+            onclick="openModal('signup')">&#x1F680; Apply Now</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BENEFITS -->
+  <div class="page" id="p-benefits">
+    <div class="phero">
+      <h1>Benefits of Remote Work</h1>
+      <p>Discover why millions are choosing remote work.</p>
+    </div>
+    <section class="sec" style="background:#f8fafc">
+      <div class="wrap">
+        <div class="g4 mb5">
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x1F550;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">Flexible Schedule</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">Work any hours that suit your life.</p>
+          </div>
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x1F30D;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">Work From Anywhere</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">Your bedroom, cafe, or beach.</p>
+          </div>
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x1F193;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">100% Free</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">No subscription, no hidden fees ever.</p>
+          </div>
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x1F393;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">Beginner Friendly</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">Most jobs require zero experience.</p>
+          </div>
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x1F4B5;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">Weekly Pay</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">Get paid via bank transfer or crypto.</p>
+          </div>
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x1F4C8;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">Career Growth</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">Start entry-level and grow to senior.</p>
+          </div>
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x1F3E0;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">No Commute</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">Save time, money, and energy daily.</p>
+          </div>
+          <div class="card ch" style="padding:26px;text-align:center">
+            <div style="font-size:38px;margin-bottom:12px">&#x2696;&#xFE0F;</div>
+            <h3 class="sf" style="font-size:16px;margin-bottom:8px">Work-Life Balance</h3>
+            <p style="color:#64748b;font-size:13px;line-height:1.7">More time with family while earning.</p>
+          </div>
+        </div>
+        <div class="tc"><button class="btn bb blg" onclick="go('jobs')">Start Enjoying These Benefits &#x2192;</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- FAQ -->
+  <div class="page" id="p-faq">
+    <div class="phero">
+      <h1>Frequently Asked Questions</h1>
+      <p>Everything you need to know before applying.</p>
+    </div>
+    <section class="sec" style="background:#fff">
+      <div class="wrap" style="max-width:700px">
+        <div id="faqlist"></div>
+        <div
+          style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:18px;padding:32px;text-align:center;margin-top:40px">
+          <h3 class="sf" style="font-size:20px;margin-bottom:9px">Still Have Questions?</h3>
+          <p style="color:#475569;margin-bottom:18px;font-size:14px">Our support team is happy to help anytime.</p>
+          <div class="brow"><a class="btn bo" href="mailto:info@primejobaxis.com">&#x1F4E7; Email Us</a><button
+              class="btn bb" onclick="go('contact')">Contact Support &#x2192;</button></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BLOG -->
+  <div class="page" id="p-blog">
+    <div class="phero">
+      <h1>Remote Work Blog</h1>
+      <p>Tips, guides, and career advice to help you thrive.</p>
+    </div>
+    <section class="sec" style="background:#f8fafc">
+      <div class="wrap">
+        <div class="g2" id="blog-g"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="page" id="p-contact">
+    <div class="phero">
+      <h1>Contact Us</h1>
+      <p>Have a question? Our team is ready to help.</p>
+    </div>
+    <section class="sec" style="background:#fff">
+      <div class="wrap" style="max-width:840px">
+        <div class="g2" style="gap:48px;align-items:start">
+          <div>
+            <h2 class="h2 mb3">Get in Touch</h2>
+            <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:22px">
+              <a href="mailto:info@primejobaxis.com"
+                style="display:flex;align-items:center;gap:13px;padding:13px 16px;background:#f8fafc;border-radius:12px;text-decoration:none"><span
+                  style="font-size:20px">&#x1F4E7;</span>
+                <div>
+                  <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Email</p>
+                  <p style="font-weight:600;color:#0f172a;font-size:13px">info@primejobaxis.com</p>
+                </div>
+              </a>
+              <a href="tel:+13152200524"
+                style="display:flex;align-items:center;gap:13px;padding:13px 16px;background:#f8fafc;border-radius:12px;text-decoration:none"><span
+                  style="font-size:20px">&#x1F4DE;</span>
+                <div>
+                  <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Phone</p>
+                  <p style="font-weight:600;color:#0f172a;font-size:13px">+1 (315) 220-0524</p>
+                </div>
+              </a>
+              <a href="https://wa.me/13152200524" target="_blank"
+                style="display:flex;align-items:center;gap:13px;padding:13px 16px;background:#f8fafc;border-radius:12px;text-decoration:none"><span
+                  style="font-size:20px">&#x1F4AC;</span>
+                <div>
+                  <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">WhatsApp</p>
+                  <p style="font-weight:600;color:#0f172a;font-size:13px">Chat with us on WhatsApp</p>
+                </div>
+              </a>
+              <div
+                style="display:flex;align-items:center;gap:13px;padding:13px 16px;background:#f8fafc;border-radius:12px">
+                <span style="font-size:20px">&#x23F0;</span>
+                <div>
+                  <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Hours</p>
+                  <p style="font-weight:600;color:#0f172a;font-size:13px">Mon-Fri: 9AM - 6PM EST</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="padding:28px">
+            <h3 class="sf" style="font-size:20px;margin-bottom:20px">Send a Message</h3>
+            <div id="csent" class="hidden tc" style="padding:40px 0">
+              <div style="font-size:40px;margin-bottom:12px">&#x2705;</div>
+              <h3 class="sf" style="font-size:18px;margin-bottom:6px">Message Sent!</h3>
+              <p style="color:#64748b;font-size:13px">We will respond within 1-2 business days.</p>
+            </div>
+            <div id="cform">
+              <div class="fg"><label class="fl">Your Name</label><input class="fi" id="cn" placeholder="John Doe"></div>
+              <div class="fg"><label class="fl">Email</label><input class="fi" id="ce" type="email"
+                  placeholder="you@email.com"></div>
+              <div class="fg"><label class="fl">Subject</label><input class="fi" id="csu"
+                  placeholder="How can we help?"></div>
+              <div class="fg"><label class="fl">Message</label><textarea class="fi" id="cm" rows="4"
+                  placeholder="Write your message here..."></textarea></div>
+              <button class="btn bb bfull" onclick="sendContact()">Send Message &#x2192;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- PRIVACY -->
+  <div class="page" id="p-privacy">
+    <div class="phero">
+      <h1>Privacy Policy</h1>
+      <p style="color:#bae6fd">Last updated: May 2025</p>
+    </div>
+    <section class="sec" style="background:#fff">
+      <div class="wrap" style="max-width:700px">
+        <div id="priv-b"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- TERMS -->
+  <div class="page" id="p-terms">
+    <div class="phero">
+      <h1>Terms &amp; Conditions</h1>
+      <p style="color:#bae6fd">Last updated: May 2025</p>
+    </div>
+    <section class="sec" style="background:#fff">
+      <div class="wrap" style="max-width:700px">
+        <div id="terms-b"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer" id="site-footer">
+    <div class="ftop">
+      <div class="wrap">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px">
+          <div>
+            <h3 style="color:#fff;font-family:'Playfair Display',serif;font-size:20px;margin-bottom:4px">Get Job Alerts
+              in Your Inbox</h3>
+            <p style="color:#bae6fd;font-size:13px">New remote jobs posted daily.</p>
+          </div>
+          <div id="nwrap" style="display:flex;gap:9px;flex-wrap:wrap">
+            <input type="email" id="nem" placeholder="Enter your email"
+              style="padding:12px 14px;border-radius:11px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;width:240px">
+            <button class="btn" style="background:#fff;color:#0369a1;font-weight:700;padding:12px 20px"
+              onclick="subNews()">Subscribe</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="fgrid">
+        <div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:13px">
+            <div class="nbox" style="width:32px;height:32px;font-size:15px">P</div><span class="sf"
+              style="font-weight:700;font-size:18px;color:#fff">Prime<span style="color:#38bdf8">JobAxis</span></span>
+          </div>
+          <p style="font-size:13px;line-height:1.7;margin-bottom:16px">Connecting talented people worldwide to
+            legitimate remote work. 100% free. No experience required.</p>
+          <div style="display:flex;gap:7px"><a class="soc" href="#" target="_blank">f</a><a class="soc" href="#"
+              target="_blank">X</a><a class="soc" href="#" target="_blank">in</a><a class="soc" href="#"
+              target="_blank">ig</a></div>
+        </div>
+        <div>
+          <p class="ftit">Quick Links</p>
+          <button class="fl2" onclick="go('jobs')">&#x2192; Find Jobs</button>
+          <button class="fl2" onclick="go('cats')">&#x2192; Categories</button>
+          <button class="fl2" onclick="go('benefits')">&#x2192; Benefits</button>
+          <button class="fl2" onclick="go('about')">&#x2192; About Us</button>
+          <button class="fl2" onclick="go('blog')">&#x2192; Blog</button>
+          <button class="fl2" onclick="go('faq')">&#x2192; FAQ</button>
+        </div>
+        <div>
+          <p class="ftit">Job Types</p>
+          <button class="fl2" onclick="go('cats')">&#x2192; Remote Jobs</button>
+          <button class="fl2" onclick="go('cats')">&#x2192; Data Entry</button>
+          <button class="fl2" onclick="go('cats')">&#x2192; Customer Support</button>
+          <button class="fl2" onclick="go('cats')">&#x2192; Virtual Assistant</button>
+          <button class="fl2" onclick="go('cats')">&#x2192; Typing Jobs</button>
+          <button class="fl2" onclick="go('cats')">&#x2192; Entry Level</button>
+        </div>
+        <div>
+          <p class="ftit">Contact</p>
+          <a class="fl2" href="mailto:info@primejobaxis.com">&#x1F4E7; info@primejobaxis.com</a>
+          <a class="fl2" href="tel:+13152200524">&#x1F4DE; +1 (315) 220-0524</a>
+          <a class="fl2" href="https://wa.me/13152200524" target="_blank">&#x1F4AC; WhatsApp Chat</a>
+          <div style="background:#1e293b;border-radius:9px;padding:11px;margin-top:12px;border:1px solid #334155">
+            <p style="font-size:11px;color:#94a3b8">&#x1F512; We never share or sell your personal information.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fbot">
+      <div class="wrap">
+        <div class="fboti">
+          <p>&copy; 2025 PrimeJobAxis.com &mdash; All Rights Reserved.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:16px"><button class="fl2" style="margin:0"
+              onclick="go('privacy')">Privacy Policy</button><button class="fl2" style="margin:0"
+              onclick="go('terms')">Terms</button><button class="fl2" style="margin:0"
+              onclick="go('faq')">FAQ</button><button class="fl2" style="margin:0"
+              onclick="go('contact')">Contact</button></div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- CHAT -->
+  <div class="cw">
+    <div class="cbox" id="cbox">
+      <div class="chd">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div
+            style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px">
+            P</div>
+          <div>
+            <p style="color:#fff;font-weight:600;font-size:12px">PrimeJobAxis Support</p>
+            <div style="display:flex;align-items:center;gap:5px;color:#86efac;font-size:10px">
+              <div style="width:5px;height:5px;background:#4ade80;border-radius:50%"></div>Online now
+            </div>
+          </div>
+        </div>
+        <button onclick="toggleChat()"
+          style="color:rgba(255,255,255,.7);background:none;border:none;font-size:20px;cursor:pointer;line-height:1">&times;</button>
+      </div>
+      <div class="cmsgs" id="cmsgs"></div>
+      <div class="cin"><input id="cin" placeholder="Type a message..."
+          onkeydown="if(event.key==='Enter')sendChat()"><button class="csend" onclick="sendChat()">Send</button></div>
+      <a class="cwa" href="https://wa.me/13152200524" target="_blank">&#x1F4AC; Chat on WhatsApp Instead</a>
+    </div>
+    <button class="cbtn" onclick="toggleChat()">&#x1F4AC;</button>
+  </div>
+
+  <script>
+    var JOBS = [
+      { id: 1, title: "Remote Data Entry Specialist", co: "DataPro Solutions", logo: "D", clr: "#0284c7", loc: "Remote — Worldwide", pay: "$15–$22/hr", type: "Part-Time", cat: "data-entry", tags: ["Beginner Friendly", "No Experience", "Flexible Hours"], desc: "Enter and verify data into our cloud-based systems. Work at your own pace from any device. Perfect for beginners looking to start a remote career.", hot: true, posted: "Today" },
+      { id: 2, title: "Virtual Customer Support Representative", co: "SupportHub Inc.", logo: "S", clr: "#10b981", loc: "Remote — USA & International", pay: "$18–$28/hr", type: "Full-Time", cat: "customer-support", tags: ["Full Training Provided", "Entry Level", "Email & Chat Only"], desc: "Help customers via live chat and email. No phone calls required. Full training provided from day one. Earn a stable monthly income from home.", hot: true, posted: "Today" },
+      { id: 3, title: "Online Typing & Transcription Clerk", co: "TypeWork Global", logo: "T", clr: "#7c3aed", loc: "100% Remote", pay: "$12–$18/hr", type: "Flexible", cat: "typing", tags: ["Work Anytime", "Phone or Laptop OK", "Beginner Friendly"], desc: "Type and transcribe audio recordings, legal documents, and business forms. Set your own hours and work at your own speed.", hot: true, posted: "1 day ago" },
+      { id: 4, title: "Executive Virtual Assistant", co: "RemoteDesk Pro", logo: "R", clr: "#f97316", loc: "Remote — Global", pay: "$20–$35/hr", type: "Part-Time", cat: "virtual-assistant", tags: ["Long-term Position", "Career Growth", "Flexible Schedule"], desc: "Support busy executives with calendar management, email handling, travel research, and administrative tasks — all from the comfort of your home.", hot: true, posted: "1 day ago" },
+      { id: 5, title: "Work From Home Chat Support Agent", co: "LiveChat Corp.", logo: "L", clr: "#0ea5e9", loc: "Remote — Any Country", pay: "$16–$24/hr", type: "Part-Time", cat: "customer-support", tags: ["No Phone Calls", "Set Your Hours", "Weekly Pay"], desc: "Provide real-time chat support to online shoppers. Respond to queries, resolve issues, and guide customers — all through text chat. No voice calls ever.", hot: true, posted: "2 days ago" },
+      { id: 6, title: "Online Product Listing & Data Entry Assistant", co: "ShopEase Worldwide", logo: "S", clr: "#ec4899", loc: "Remote — Any Country", pay: "$14–$20/hr", type: "Flexible", cat: "data-entry", tags: ["Beginner Friendly", "Daily Pay Option", "Mobile OK"], desc: "Upload, format, and manage product listings on major e-commerce platforms. Copy and paste product information, write short descriptions, and update prices.", hot: true, posted: "2 days ago" },
+      { id: 7, title: "Remote Administrative Coordinator", co: "AdminLink Corp.", logo: "A", clr: "#14b8a6", loc: "Work From Home", pay: "$22–$32/hr", type: "Full-Time", cat: "work-from-home", tags: ["Stable Income", "Benefits Included", "Career Growth"], desc: "Coordinate team schedules, organize digital files, prepare reports, and handle internal communications for a growing remote-first company.", hot: true, posted: "3 days ago" },
+      { id: 8, title: "Freelance Content Reviewer & Moderator", co: "ContentSafe AI", logo: "C", clr: "#6366f1", loc: "Remote Worldwide", pay: "$17–$25/hr", type: "Freelance", cat: "freelance", tags: ["Work Any Hours", "Weekly Payment", "No Experience Needed"], desc: "Review and rate AI-generated content for quality, accuracy, and safety. Help improve AI systems by providing feedback. Fully flexible schedule.", hot: false, posted: "3 days ago" },
+      { id: 9, title: "Remote Email & Inbox Management Specialist", co: "InboxPro Team", logo: "I", clr: "#f59e0b", loc: "Work From Home", pay: "$16–$22/hr", type: "Part-Time", cat: "virtual-assistant", tags: ["Email Only", "Organized Role", "No Experience"], desc: "Manage and organize email inboxes for busy business owners. Sort emails, draft responses using templates, flag urgent messages, and keep inboxes clean.", hot: false, posted: "4 days ago" },
+      { id: 10, title: "Online Survey & Form Completion Specialist", co: "ResearchPoint Global", logo: "R", clr: "#10b981", loc: "Remote — Worldwide", pay: "$12–$18/hr", type: "Flexible", cat: "entry-level", tags: ["Super Easy", "Work From Phone", "Instant Approval"], desc: "Complete online surveys, feedback forms, and market research questionnaires for global brands. No experience or special skills required. Start today.", hot: false, posted: "4 days ago" },
+      { id: 11, title: "Remote Bookkeeping & Invoice Data Entry Clerk", co: "FinTrack Solutions", logo: "F", clr: "#0284c7", loc: "Remote — USA & Canada", pay: "$18–$26/hr", type: "Part-Time", cat: "data-entry", tags: ["Numbers Focused", "Accurate Work", "Weekly Pay"], desc: "Enter invoice data, update spreadsheets, and help maintain basic financial records for small businesses. Spreadsheet skills are a plus but training is provided.", hot: false, posted: "5 days ago" },
+      { id: 12, title: "Social Media Assistant & Content Scheduler", co: "BrandBoost Digital", logo: "B", clr: "#7c3aed", loc: "100% Remote", pay: "$15–$24/hr", type: "Part-Time", cat: "work-from-home", tags: ["Social Media", "Creative Role", "Beginner OK"], desc: "Schedule posts, write short captions, source images, and help manage social media accounts for small businesses. Work from your phone or laptop.", hot: false, posted: "5 days ago" },
+      { id: 13, title: "Remote Lead Generation & Research Assistant", co: "GrowthHive Agency", logo: "G", clr: "#ef4444", loc: "Remote — Global", pay: "$14–$22/hr", type: "Flexible", cat: "freelance", tags: ["Research Based", "Work At Own Pace", "Good Pay"], desc: "Find and compile contact information for potential business clients using LinkedIn and Google. Copy data into spreadsheets and CRM tools. Easy and beginner-friendly.", hot: false, posted: "6 days ago" },
+      { id: 14, title: "Work From Home Order Processing Clerk", co: "FulfillFast Logistics", logo: "F", clr: "#14b8a6", loc: "Remote — USA & UK", pay: "$15–$21/hr", type: "Full-Time", cat: "entry-level", tags: ["Stable Income", "Daily Tasks", "No Experience"], desc: "Process incoming customer orders, update order management systems, verify shipping details, and communicate with customers about their order status — all online.", hot: false, posted: "1 week ago" },
+      { id: 15, title: "Online English Proofreader & Copy Editor", co: "WordPerfect Media", logo: "W", clr: "#f97316", loc: "Remote Worldwide", pay: "$18–$30/hr", type: "Freelance", cat: "freelance", tags: ["Good English Required", "Creative Work", "High Pay"], desc: "Proofread articles, website content, emails, and marketing copy for grammar, spelling, and clarity. Ideal for anyone with a strong command of the English language.", hot: false, posted: "1 week ago" },
+      { id: 16, title: "Remote IT Help Desk Support Technician", co: "TechDesk Remote", logo: "T", clr: "#0369a1", loc: "Remote — USA & International", pay: "$22–$38/hr", type: "Full-Time", cat: "customer-support", tags: ["Tech Support", "Training Provided", "High Earning"], desc: "Provide basic IT support to employees via chat and email. Help with password resets, software installations, and common technical issues. Training is fully provided.", hot: false, posted: "1 week ago" },
+      { id: 17, title: "Remote Appointment Setter & Scheduler", co: "CalendarPro Services", logo: "C", clr: "#6366f1", loc: "Work From Home", pay: "$14–$20/hr", type: "Part-Time", cat: "virtual-assistant", tags: ["Easy Role", "Good Communicator", "Flexible Hours"], desc: "Contact warm leads via email and online chat to schedule appointments for sales teams. Use our simple scheduling software — no cold calling required.", hot: false, posted: "1 week ago" }
+    ];
+    var CATS = [
+      { id: "remote", icon: "🌍", name: "Remote Jobs", count: 240, pay: "$12–$35/hr", who: "Anyone with a device and internet", desc: "Work entirely online from any country." },
+      { id: "data-entry", icon: "⌨️", name: "Data Entry", count: 133, pay: "$12–$22/hr", who: "Beginners, students, parents", desc: "Enter, update, and manage data in spreadsheets." },
+      { id: "customer-support", icon: "🎧", name: "Customer Support", count: 144, pay: "$15–$28/hr", who: "Patient, friendly communicators", desc: "Help customers via chat or email." },
+      { id: "virtual-assistant", icon: "💼", name: "Virtual Assistant", count: 90, pay: "$18–$40/hr", who: "Organized, detail-oriented people", desc: "Support executives with admin and scheduling." },
+      { id: "typing", icon: "📝", name: "Typing Jobs", count: 86, pay: "$12–$20/hr", who: "Anyone who can type 30+ WPM", desc: "Type and transcribe documents and audio files." },
+      { id: "freelance", icon: "🔗", name: "Freelance Jobs", count: 120, pay: "$15–$50/hr", who: "Self-motivated independent workers", desc: "Flexible project-based work on your schedule." },
+      { id: "work-from-home", icon: "🏠", name: "Work From Home", count: 79, pay: "$14–$32/hr", who: "Anyone seeking stable home income", desc: "Full or part-time positions from your home." },
+      { id: "entry-level", icon: "⭐", name: "Entry Level", count: 52, pay: "$12–$20/hr", who: "Graduates, beginners, career-changers", desc: "Jobs designed for first-timers with zero experience." }
+    ];
+    var REVIEWS = [
+      { name: "Sarah M.", loc: "Texas, USA", role: "Data Entry Specialist", txt: "PrimeJobAxis got me a remote data entry job within a week! I earn $1,400/month from my laptop while caring for my kids. The application was so simple!", av: "S", clr: "#0284c7" },
+      { name: "Emmanuel K.", loc: "Toronto, Canada", role: "Virtual Assistant", txt: "I was amazed to get hired as a virtual assistant with no formal experience. I work from my phone, earn in USD, and the team was so professional.", av: "E", clr: "#10b981" },
+      { name: "Linda J.", loc: "Ontario, Canada", role: "Customer Support Agent", txt: "After being laid off, I found a remote customer support role in just 4 days. I filled the form and the team called me the same week!", av: "L", clr: "#7c3aed" },
+      { name: "Maria Santos", loc: "Manila, Philippines", role: "Online Typing Clerk", txt: "I work part-time as a typing clerk and earn extra income while studying. PrimeJobAxis made it possible with no experience needed!", av: "M", clr: "#f97316" }
+    ];
+    var FAQS = [
+      { q: "Is it really free to apply?", a: "Yes, 100% free. PrimeJobAxis charges zero fees. You will never be asked to pay anything at any stage of the application process." },
+      { q: "Do I need work experience?", a: "Most of our jobs are beginner-friendly and require no prior experience. We partner with employers who are open to training new workers from scratch." },
+      { q: "Can I apply from any country?", a: "Absolutely. We serve applicants from the USA and over 138 countries worldwide. As long as you have an internet connection and speak English, you can apply." },
+      { q: "What devices can I use to work?", a: "You can work using a mobile phone, laptop, tablet, or desktop computer — any device with a stable internet connection." },
+      { q: "How long does it take to get a response?", a: "Our team reviews all applications and contacts qualified candidates within 1–3 business days by email or phone." },
+      { q: "Do I need to create an account to apply?", a: "Yes, you need to create a free account with just your email and password. This keeps your application secure and lets you log back in anytime." },
+      { q: "What are the working hours?", a: "Most positions offer flexible hours — full-time, part-time, or freelance. You set your own schedule." },
+      { q: "How will I receive payment?", a: "Options include Bank Transfer, Mobile Deposit, Credit Card, and Cryptocurrency. Our finance team contacts you securely after approval to set up your payout details." }
+    ];
+    var BLOGS = [
+      { icon: "📊", cat: "Remote Work", title: "10 Best Remote Jobs for Beginners in 2025", exc: "No experience? No problem. Here are the top remote jobs anyone can start today.", date: "May 15, 2025", read: "5 min read" },
+      { icon: "🏠", cat: "Work From Home", title: "The Complete Guide to Working From Home Successfully", exc: "Set up your home office, stay productive, and earn a great income.", date: "May 10, 2025", read: "7 min read" },
+      { icon: "💻", cat: "Career Tips", title: "7 Tips to Ace Your Online Job Interview", exc: "Video interviews are different. Learn exactly how to impress hiring managers from home.", date: "May 5, 2025", read: "4 min read" },
+      { icon: "⌨️", cat: "Data Entry", title: "Data Entry Jobs: Everything You Need to Know", exc: "What is data entry, how much does it pay, and how do you land your first job? All answered.", date: "April 28, 2025", read: "6 min read" }
+    ];
+
+
+    // ── Navigation ──────────────────────────────────────────────
+    function go(name) {
+      document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+      document.querySelectorAll('.nl').forEach(function (b) { b.classList.remove('on'); });
+      var pg = document.getElementById('p-' + name);
+      if (pg) pg.classList.add('active');
+      var nb = document.getElementById('nl-' + name);
+      if (nb) nb.classList.add('on');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      var noFt = ['apply', 'success'];
+      var ft = document.getElementById('site-footer');
+      if (ft) ft.style.display = noFt.indexOf(name) > -1 ? 'none' : 'block';
+      if (name === 'jobs') filterJobs();
+      if (name === 'cats') renderCats();
+      if (name === 'faq') renderFAQ();
+      if (name === 'blog') renderBlog();
+      if (name === 'privacy' || name === 'terms') renderLegal();
+      doReveal();
+    }
+    function toggleBurger() { document.getElementById('mnav').classList.toggle('open'); }
+    function closeBurger() { document.getElementById('mnav').classList.remove('open'); }
+    function toggleDrop() { document.getElementById('udrop').classList.toggle('hidden'); }
+    function closeDrop() { document.getElementById('udrop').classList.add('hidden'); }
+    document.addEventListener('click', function (e) {
+      var d = document.getElementById('udrop');
+      var p = document.querySelector('.upill');
+      if (d && p && !d.contains(e.target) && !p.contains(e.target)) d.classList.add('hidden');
+    });
+
+    // ── Auth-aware CTA button ────────────────────────────────────
+    function heroAuthClick() {
+      if (window._user) { go('jobs'); showToast('You are already signed in! Browse jobs below.', 'green'); }
+      else openModal('signup');
+    }
+
+    function updateAuthButtons() {
+      var on = !!window._user;
+      var hb = document.getElementById('hero-auth-btn');
+      if (hb) hb.textContent = on ? 'Get A Job Now' : 'Create Account';
+      var cb = document.getElementById('cta-auth-btn');
+      if (cb) cb.textContent = on ? 'Get A Job Now' : 'Create Free Account';
+      var s2t = document.getElementById('step2-title');
+      var s2d = document.getElementById('step2-desc');
+      if (s2t) s2t.textContent = on ? 'Apply for a Job' : 'Create Account & Apply';
+      if (s2d) s2d.textContent = on
+        ? 'Apply now and begin your journey to financial freedom.'
+        : 'Sign up free with just your email and password, then fill our simple 4-step form.';
+      var wb = document.getElementById('welcome-banner');
+      if (wb) wb.style.display = on ? 'block' : 'none';
+    }
+
+    // ── Auth Modal ───────────────────────────────────────────────
+    function openModal(tab) {
+      if (window._user && tab === 'signup') {
+        go('jobs');
+        showToast('You are already signed in! Browse jobs below.', 'green');
+        return;
+      }
+      document.getElementById('overlay').classList.add('show');
+      mTab(tab || 'signup');
+      clearAErr();
+    }
+    function closeModal() { document.getElementById('overlay').classList.remove('show'); clearAErr(); }
+    function closeModalBg(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+    function mTab(tab) {
+      ['signup', 'login', 'forgot', 'resent'].forEach(function (t) {
+        document.getElementById('f-' + t).classList.toggle('hidden', t !== tab);
+      });
+      document.getElementById('m-tabs').style.display = (tab === 'signup' || tab === 'login') ? 'flex' : 'none';
+      var ts = document.getElementById('t-signup');
+      var tl = document.getElementById('t-login');
+      if (ts) ts.classList.toggle('on', tab === 'signup');
+      if (tl) tl.classList.toggle('on', tab === 'login');
+      var ti = document.getElementById('m-title');
+      var si = document.getElementById('m-sub');
+      if (tab === 'signup') { if (ti) ti.textContent = 'Create Your Free Account'; if (si) si.textContent = 'Join 92,000+ people who found remote work'; }
+      else if (tab === 'login') { if (ti) ti.textContent = 'Welcome Back!'; if (si) si.textContent = 'Sign in to access your account'; }
+      else if (tab === 'forgot') { if (ti) ti.textContent = 'Reset Your Password'; if (si) si.textContent = "We'll send a reset link to your email"; }
+      else if (tab === 'resent') { if (ti) ti.textContent = 'Check Your Email'; if (si) si.textContent = 'Reset link sent — check your inbox'; }
+      clearAErr();
+    }
+    function showAErr(msg) { var e = document.getElementById('aerr'); if (e) { e.innerHTML = msg; e.classList.add('on'); } }
+    function clearAErr() {
+      var e = document.getElementById('aerr'); if (e) e.classList.remove('on');
+      document.querySelectorAll('.fe').forEach(function (x) { x.classList.remove('on'); });
+      document.querySelectorAll('.fi').forEach(function (x) { x.classList.remove('err'); });
+    }
+
+    async function doSignUp() {
+      clearAErr();
+      var em = document.getElementById('su-em').value.trim();
+      var pw = document.getElementById('su-pw').value;
+      var pw2 = document.getElementById('su-pw2').value;
+      var ok = true;
+
+      if (!em || !em.includes('@') || !em.includes('.')) {
+        document.getElementById('su-em-e').classList.add('on');
+        document.getElementById('su-em').classList.add('err');
+        ok = false;
+      }
+      if (!pw || pw.length < 8 || !/[A-Z]/.test(pw) || !/[0-9]/.test(pw)) {
+        document.getElementById('su-pw-e').classList.add('on');
+        document.getElementById('su-pw').classList.add('err');
+        ok = false;
+      }
+      if (pw !== pw2) {
+        document.getElementById('su-pw2-e').classList.add('on');
+        document.getElementById('su-pw2').classList.add('err');
+        ok = false;
+      }
+
+      if (!ok) {
+        showAErr('Please provide real information: valid email and strong password (8+ chars with uppercase & number)');
+        return;
+      }
+
+      var btn = document.getElementById('su-btn');
+      btn.disabled = true; btn.textContent = 'Creating account...';
+      try {
+        if (!window._fbSignUp) throw new Error('Firebase loading. Please wait a moment and try again.');
+        var result = await window._fbSignUp(em, pw);
+        try {
+          if (window._fbDB && window._fbCol && window._fbAdd) {
+            await window._fbAdd(window._fbCol(window._fbDB, 'users'), {
+              email: em, uid: result.user.uid,
+              registeredAt: new Date().toISOString(),
+              createdAt: window._fbTS ? window._fbTS() : new Date()
+            });
+          }
+        } catch (e2) { console.warn('Firestore user save:', e2.message); }
+        closeModal();
+        showToast('Account created successfully! You can now apply for jobs.', 'green');
+      } catch (err) {
+        var msg = err.message || 'Something went wrong. Please try again.';
+        if (err.code === 'auth/email-already-in-use') msg = 'This email already has an account. Please Sign In instead.';
+        else if (err.code === 'auth/invalid-email') msg = 'Please enter a valid email address.';
+        else if (err.code === 'auth/weak-password') msg = 'Password must be at least 8 characters with uppercase and number.';
+        showAErr(msg);
+      }
+      btn.disabled = false; btn.textContent = 'Create Free Account';
+    }
+
+    async function doLogin() {
+      clearAErr();
+      var em = document.getElementById('li-em').value.trim();
+      var pw = document.getElementById('li-pw').value;
+      if (!em || !pw || !em.includes('@')) {
+        showAErr('Please enter a valid email and password.');
+        return;
+      } var btn = document.getElementById('li-btn');
+      btn.disabled = true; btn.textContent = 'Signing in...';
+      try {
+        if (!window._fbSignIn) throw new Error('Firebase loading. Please wait a moment and try again.');
+        await window._fbSignIn(em, pw);
+        closeModal();
+        showToast('Welcome back! You are now signed in.', 'blue');
+      } catch (err) {
+        var msg = 'Incorrect email or password. Please try again.';
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') msg = 'No account found with this email. Please create an account first.';
+        else if (err.code === 'auth/invalid-email') msg = 'Please enter a valid email address.';
+        else if (err.code === 'auth/too-many-requests') msg = 'Too many failed attempts. Please wait a few minutes.';
+        showAErr(msg);
+      }
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+
+    async function doReset() {
+      clearAErr();
+      var em = document.getElementById('fp-em').value.trim();
+      if (!em || em.indexOf('@') < 1) { showAErr('Please enter a valid email address.'); return; }
+      var btn = document.getElementById('fp-btn');
+      btn.disabled = true; btn.textContent = 'Sending...';
+      try {
+        if (!window._fbReset) throw new Error('Firebase loading. Please wait a moment and try again.');
+        await window._fbReset(em);
+        mTab('resent');
+      } catch (err) {
+        var msg = 'Could not send reset email. Please check the address.';
+        if (err.code === 'auth/user-not-found') msg = 'No account found with this email address.';
+        showAErr(msg);
+      }
+      btn.disabled = false; btn.textContent = 'Send Reset Link';
+    }
+
+    async function doSignOut() {
+      try { if (window._fbSignOut) await window._fbSignOut(); } catch (e) { }
+      closeDrop();
+      showToast('You have been signed out.', 'blue');
+    }
+
+    // ── Safe HTML builder — no bare < > in JS strings ────────────
+    // Uses a div to safely set innerHTML then reads outerHTML
+    function safeHTML(tag, attrs, children) {
+      var el = document.createElement(tag);
+      if (attrs) {
+        Object.keys(attrs).forEach(function (k) {
+          if (k === 'style') el.style.cssText = attrs[k];
+          else if (k === 'class') el.className = attrs[k];
+          else if (k === 'onclick') el.setAttribute('onclick', attrs[k]);
+          else el.setAttribute(k, attrs[k]);
+        });
+      }
+      if (typeof children === 'string') el.textContent = children;
+      else if (Array.isArray(children)) {
+        children.forEach(function (ch) {
+          if (typeof ch === 'string') el.insertAdjacentHTML('beforeend', ch);
+          else if (ch) el.appendChild(ch);
+        });
+      }
+      return el;
+    }
+
+    // ── Job card builder using DOM (no bare < >) ─────────────────
+    function makeJobCard(j) {
+      var card = document.createElement('div');
+      card.className = 'card jcard ch';
+      card.onclick = function () { tryApply(j.id); };
+
+      // Top row: logo + title + badge
+      var topRow = document.createElement('div');
+      topRow.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:13px';
+
+      var logoGroup = document.createElement('div');
+      logoGroup.style.cssText = 'display:flex;align-items:center;gap:11px';
+
+      var logo = document.createElement('div');
+      logo.className = 'jlogo';
+      logo.style.background = j.clr;
+      logo.textContent = j.logo;
+
+      var titleGroup = document.createElement('div');
+      var titleEl = document.createElement('div');
+      titleEl.className = 'jtit';
+      titleEl.textContent = j.title;
+      var coEl = document.createElement('div');
+      coEl.style.cssText = 'color:#64748b;font-size:12px;margin-top:2px';
+      coEl.textContent = j.co;
+      titleGroup.appendChild(titleEl);
+      titleGroup.appendChild(coEl);
+
+      logoGroup.appendChild(logo);
+      logoGroup.appendChild(titleGroup);
+      topRow.appendChild(logoGroup);
+
+      if (j.hot) {
+        var badge = document.createElement('span');
+        badge.className = 'bdg bor';
+        badge.style.cssText = 'white-space:nowrap;flex-shrink:0';
+        badge.textContent = 'Featured';
+        topRow.appendChild(badge);
+      }
+      card.appendChild(topRow);
+
+      // Description
+      var desc = document.createElement('p');
+      desc.style.cssText = 'color:#64748b;font-size:13px;line-height:1.7;margin-bottom:11px';
+      desc.textContent = j.desc;
+      card.appendChild(desc);
+
+      // Meta badges
+      var meta = document.createElement('div');
+      meta.className = 'jmeta';
+      [[j.loc, 'bbl'], [j.pay, 'bgr'], [j.type, 'bgy']].forEach(function (item) {
+        var b = document.createElement('span');
+        b.className = 'bdg ' + item[1];
+        b.textContent = item[0];
+        meta.appendChild(b);
+      });
+      card.appendChild(meta);
+
+      // Tags
+      var tags = document.createElement('div');
+      tags.className = 'jtags';
+      j.tags.forEach(function (t) {
+        var s = document.createElement('span');
+        s.className = 'jtag';
+        s.textContent = t;
+        tags.appendChild(s);
+      });
+      card.appendChild(tags);
+
+      // Divider
+      var div = document.createElement('div');
+      div.style.cssText = 'height:1px;background:#f8fafc;margin:11px 0';
+      card.appendChild(div);
+
+      // Footer: posted + apply button
+      var footer = document.createElement('div');
+      footer.style.cssText = 'display:flex;align-items:center;justify-content:space-between';
+
+      var postedEl = document.createElement('span');
+      postedEl.style.cssText = 'font-size:11px;color:#94a3b8';
+      postedEl.textContent = 'Posted ' + j.posted;
+
+      var applyBtn = document.createElement('button');
+      applyBtn.className = 'btn bb bsm';
+      applyBtn.textContent = 'Apply Free';
+      applyBtn.onclick = function (e) { e.stopPropagation(); tryApply(j.id); };
+
+      footer.appendChild(postedEl);
+      footer.appendChild(applyBtn);
+      card.appendChild(footer);
+
+      return card;
+    }
+
+    // ── Render Home ──────────────────────────────────────────────
+    function initHome() {
+      var hc = document.getElementById('h-cats');
+      if (hc) {
+        hc.innerHTML = '';
+        CATS.forEach(function (c) {
+          var el = document.createElement('div');
+          el.className = 'card ch';
+          el.style.cssText = 'padding:20px;text-align:center;cursor:pointer';
+          el.onclick = function () { go('cats'); };
+          el.innerHTML = '<div style="font-size:34px;margin-bottom:9px">' + c.icon + '</div>';
+          var nm = document.createElement('div');
+          nm.style.cssText = 'font-weight:700;font-size:13px;color:#0f172a';
+          nm.textContent = c.name;
+          var cnt = document.createElement('div');
+          cnt.style.cssText = 'color:#0284c7;font-size:12px;font-weight:600;margin-top:3px';
+          cnt.textContent = c.count.toLocaleString() + ' jobs';
+          el.appendChild(nm);
+          el.appendChild(cnt);
+          hc.appendChild(el);
+        });
+      }
+
+      var hj = document.getElementById('h-jobs');
+      if (hj) {
+        hj.innerHTML = '';
+        JOBS.filter(function (j) { return j.hot; }).forEach(function (j) {
+          hj.appendChild(makeJobCard(j));
+        });
+      }
+
+      var hr = document.getElementById('h-reviews');
+      if (hr) {
+        hr.innerHTML = '';
+        REVIEWS.forEach(function (r) {
+          var card = document.createElement('div');
+          card.className = 'card ch';
+          card.style.cssText = 'padding:24px';
+
+          var stars = document.createElement('div');
+          stars.style.cssText = 'color:#f59e0b;font-size:15px;letter-spacing:2px;margin-bottom:9px';
+          stars.textContent = '★★★★★';
+
+          var quote = document.createElement('p');
+          quote.style.cssText = 'color:#0f172a;line-height:1.7;font-style:italic;margin-bottom:16px;font-size:14px';
+          quote.textContent = '"' + r.txt + '"';
+
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:11px;padding-top:13px;border-top:1px solid #f1f5f9';
+
+          var av = document.createElement('div');
+          av.style.cssText = 'width:38px;height:38px;border-radius:50%;background:' + r.clr + ';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0';
+          av.textContent = r.av;
+
+          var info = document.createElement('div');
+          var nm = document.createElement('p');
+          nm.style.cssText = 'font-weight:700;font-size:13px;color:#0f172a';
+          nm.textContent = r.name;
+          var rl = document.createElement('p');
+          rl.style.cssText = 'color:#64748b;font-size:11px';
+          rl.textContent = r.role + ' · ' + r.loc;
+          info.appendChild(nm);
+          info.appendChild(rl);
+
+          var vbdg = document.createElement('span');
+          vbdg.className = 'bdg bgr';
+          vbdg.style.cssText = 'margin-left:auto;font-size:10px';
+          vbdg.textContent = 'Verified';
+
+          row.appendChild(av);
+          row.appendChild(info);
+          row.appendChild(vbdg);
+
+          card.appendChild(stars);
+          card.appendChild(quote);
+          card.appendChild(row);
+          hr.appendChild(card);
+        });
+      }
+    }
+
+    // ── Filter & Render Jobs ─────────────────────────────────────
+    function filterJobs() {
+      var q = document.getElementById('js').value.toLowerCase();
+      var cat = document.getElementById('jc').value;
+      var typ = document.getElementById('jt').value;
+      var list = JOBS.filter(function (j) {
+        return (!q || j.title.toLowerCase().indexOf(q) > -1 || j.co.toLowerCase().indexOf(q) > -1 || j.desc.toLowerCase().indexOf(q) > -1)
+          && (!cat || j.cat === cat)
+          && (!typ || j.type.indexOf(typ) > -1);
+      });
+      var grid = document.getElementById('jgrid');
+      var none = document.getElementById('jnone');
+      var cnt = document.getElementById('jcnt');
+      grid.innerHTML = '';
+      if (!list.length) {
+        none.classList.remove('hidden');
+        cnt.textContent = '';
+      } else {
+        none.classList.add('hidden');
+        list.forEach(function (j) { grid.appendChild(makeJobCard(j)); });
+        cnt.innerHTML = 'Showing <strong style="color:#0284c7">' + list.length + '</strong> job' + (list.length !== 1 ? 's' : '');
+      }
+    }
+
+    // ── Render Categories ────────────────────────────────────────
+    function renderCats() {
+      var g = document.getElementById('cats-g');
+      if (!g) return;
+      g.innerHTML = '';
+      CATS.forEach(function (cat) {
+        var card = document.createElement('div');
+        card.className = 'card ch';
+        card.style.cssText = 'padding:26px';
+
+        // Header
+        var hdr = document.createElement('div');
+        hdr.style.cssText = 'display:flex;align-items:flex-start;gap:13px;margin-bottom:16px';
+        var iconEl = document.createElement('div');
+        iconEl.style.fontSize = '40px';
+        iconEl.textContent = cat.icon;
+        var hdrText = document.createElement('div');
+        var catName = document.createElement('h2');
+        catName.className = 'sf';
+        catName.style.fontSize = '19px';
+        catName.textContent = cat.name;
+        var catDesc = document.createElement('p');
+        catDesc.style.cssText = 'color:#64748b;font-size:13px;margin-top:3px';
+        catDesc.textContent = cat.desc;
+        hdrText.appendChild(catName);
+        hdrText.appendChild(catDesc);
+        hdr.appendChild(iconEl);
+        hdr.appendChild(hdrText);
+        card.appendChild(hdr);
+
+        // Stats grid
+        var statsGrid = document.createElement('div');
+        statsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px';
+        var payBox = document.createElement('div');
+        payBox.style.cssText = 'background:#f0fdf4;border-radius:9px;padding:11px';
+        var payLbl = document.createElement('p');
+        payLbl.style.cssText = 'font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase';
+        payLbl.textContent = 'Typical Pay';
+        var payVal = document.createElement('p');
+        payVal.style.cssText = 'font-weight:700;color:#166534;font-size:13px';
+        payVal.textContent = cat.pay;
+        payBox.appendChild(payLbl);
+        payBox.appendChild(payVal);
+        var posBox = document.createElement('div');
+        posBox.style.cssText = 'background:#f0f9ff;border-radius:9px;padding:11px';
+        var posLbl = document.createElement('p');
+        posLbl.style.cssText = 'font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase';
+        posLbl.textContent = 'Open Positions';
+        var posVal = document.createElement('p');
+        posVal.style.cssText = 'font-weight:700;color:#0284c7;font-size:13px';
+        posVal.textContent = cat.count.toLocaleString();
+        posBox.appendChild(posLbl);
+        posBox.appendChild(posVal);
+        statsGrid.appendChild(payBox);
+        statsGrid.appendChild(posBox);
+        card.appendChild(statsGrid);
+
+        // Best for
+        var bfLbl = document.createElement('p');
+        bfLbl.style.cssText = 'font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:5px';
+        bfLbl.textContent = 'Best For';
+        var bfVal = document.createElement('p');
+        bfVal.style.cssText = 'font-size:13px;color:#0f172a;margin-bottom:13px';
+        bfVal.textContent = cat.who;
+        card.appendChild(bfLbl);
+        card.appendChild(bfVal);
+
+        // Sample jobs
+        var sampleJobs = JOBS.filter(function (j) { return j.cat === cat.id; }).slice(0, 2);
+        sampleJobs.forEach(function (j) {
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-bottom:6px';
+          var jt = document.createElement('span');
+          jt.style.cssText = 'font-size:12px;font-weight:600;color:#0f172a';
+          jt.textContent = j.title;
+          var jp = document.createElement('span');
+          jp.style.cssText = 'font-size:12px;font-weight:700;color:#10b981';
+          jp.textContent = j.pay;
+          row.appendChild(jt);
+          row.appendChild(jp);
+          card.appendChild(row);
+        });
+
+        // Browse button
+        var btn = document.createElement('button');
+        btn.className = 'btn bb bfull';
+        btn.textContent = 'Browse ' + cat.name;
+        btn.onclick = function () { go('jobs'); };
+        card.appendChild(btn);
+
+        g.appendChild(card);
+      });
+    }
+
+    // ── Render FAQ ───────────────────────────────────────────────
+    function renderFAQ() {
+      var el = document.getElementById('faqlist');
+      if (!el) return;
+      el.innerHTML = '';
+      FAQS.forEach(function (f, i) {
+        var item = document.createElement('div');
+        item.className = 'fqi';
+        item.id = 'fq' + i;
+
+        var q = document.createElement('div');
+        q.className = 'fqq';
+        q.onclick = function () { tFAQ(i); };
+        var qText = document.createElement('span');
+        qText.textContent = f.q;
+        var qIcon = document.createElement('span');
+        qIcon.className = 'fqic';
+        qIcon.textContent = '+';
+        q.appendChild(qText);
+        q.appendChild(qIcon);
+
+        var a = document.createElement('div');
+        a.className = 'fqa';
+        a.textContent = f.a;
+
+        item.appendChild(q);
+        item.appendChild(a);
+        el.appendChild(item);
+      });
+    }
+    function tFAQ(i) { document.getElementById('fq' + i).classList.toggle('open'); }
+
+    // ── Render Blog ──────────────────────────────────────────────
+    function renderBlog() {
+      var g = document.getElementById('blog-g');
+      if (!g) return;
+      g.innerHTML = '';
+      BLOGS.forEach(function (b) {
+        var card = document.createElement('div');
+        card.className = 'card ch';
+        card.style.cssText = 'overflow:hidden';
+
+        var img = document.createElement('div');
+        img.style.cssText = 'background:linear-gradient(135deg,#f0f9ff,#e0f2fe);height:140px;display:flex;align-items:center;justify-content:center;font-size:68px';
+        img.textContent = b.icon;
+        card.appendChild(img);
+
+        var body = document.createElement('div');
+        body.style.cssText = 'padding:22px';
+
+        var meta = document.createElement('div');
+        meta.style.cssText = 'display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap';
+        var catBdg = document.createElement('span');
+        catBdg.className = 'bdg bbl';
+        catBdg.textContent = b.cat;
+        var readEl = document.createElement('span');
+        readEl.style.cssText = 'color:#94a3b8;font-size:11px';
+        readEl.textContent = b.read;
+        var dateEl = document.createElement('span');
+        dateEl.style.cssText = 'color:#94a3b8;font-size:11px;margin-left:auto';
+        dateEl.textContent = b.date;
+        meta.appendChild(catBdg);
+        meta.appendChild(readEl);
+        meta.appendChild(dateEl);
+
+        var titleEl = document.createElement('h2');
+        titleEl.className = 'sf';
+        titleEl.style.cssText = 'font-size:18px;margin-bottom:9px;line-height:1.3';
+        titleEl.textContent = b.title;
+
+        var excEl = document.createElement('p');
+        excEl.style.cssText = 'color:#64748b;font-size:13px;line-height:1.7;margin-bottom:16px';
+        excEl.textContent = b.exc;
+
+        var readBtn = document.createElement('button');
+        readBtn.style.cssText = 'color:#0284c7;font-weight:700;font-size:13px;background:none;border:none;cursor:pointer;font-family:"DM Sans",sans-serif';
+        readBtn.textContent = 'Read Article';
+
+        body.appendChild(meta);
+        body.appendChild(titleEl);
+        body.appendChild(excEl);
+        body.appendChild(readBtn);
+        card.appendChild(body);
+        g.appendChild(card);
+      });
+    }
+
+    // ── Render Legal ─────────────────────────────────────────────
+    function renderLegal() {
+      var pb = [
+        { t: '1. Information We Collect', b: 'When you create an account or submit a job application, we collect your email, name, phone, country, date of birth, address, English level, device type, job category, experience level, and introduction.' },
+        { t: '2. How We Use Your Information', b: 'We use your information solely to match you with job opportunities and contact you. We never sell your personal information to third parties.' },
+        { t: '3. Data Storage & Security', b: 'Your data is securely stored using Firebase (Google Cloud) with enterprise-grade encryption. All transfers are encrypted via HTTPS/SSL.' },
+        { t: '4. Cookies', b: 'PrimeJobAxis uses cookies to enhance your experience. You can disable cookies in your browser settings at any time.' },
+        { t: '5. Your Rights', b: 'You have the right to access, correct, or delete your personal data. Email info@primejobaxis.com and we will respond within 5 business days.' },
+        { t: '6. Contact', b: 'For questions contact info@primejobaxis.com or call +1 (315) 220-0524.' }
+      ];
+      var tb = [
+        { t: '1. Acceptance of Terms', b: 'By accessing PrimeJobAxis.com, you agree to be bound by these Terms and Conditions.' },
+        { t: '2. Free Service', b: 'PrimeJobAxis is completely free for job seekers. Any service requesting payment and claiming to be PrimeJobAxis is fraudulent.' },
+        { t: '3. Accuracy of Information', b: 'By submitting an application, you confirm all information is accurate. False information may result in disqualification.' },
+        { t: '4. No Guarantees', b: 'PrimeJobAxis connects job seekers with employers but does not guarantee employment.' },
+        { t: '5. Prohibited Conduct', b: 'You may not use PrimeJobAxis for fraudulent or illegal purposes.' },
+        { t: '6. Intellectual Property', b: 'All content on PrimeJobAxis.com is protected by copyright law.' },
+        { t: '7. Limitation of Liability', b: 'PrimeJobAxis is not liable for damages resulting from your use of the site.' },
+        { t: '8. Changes to Terms', b: 'We reserve the right to update these terms at any time.' },
+        { t: '9. Contact', b: 'For questions contact info@primejobaxis.com.' }
+      ];
+      function renderSection(arr, containerId) {
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+        arr.forEach(function (s) {
+          var wrap = document.createElement('div');
+          wrap.style.marginBottom = '24px';
+          var h = document.createElement('h2');
+          h.className = 'sf';
+          h.style.cssText = 'font-size:17px;margin-bottom:9px';
+          h.textContent = s.t;
+          var p = document.createElement('p');
+          p.style.cssText = 'color:#475569;line-height:1.8;font-size:13px';
+          p.textContent = s.b;
+          wrap.appendChild(h);
+          wrap.appendChild(p);
+          el.appendChild(wrap);
+        });
+      }
+      renderSection(pb, 'priv-b');
+      renderSection(tb, 'terms-b');
+    }
+
+    // ── Apply Form ───────────────────────────────────────────────
+    var curStep = 1, payChoice = '', applyJobId = null;
+
+    function tryApply(id) {
+      if (window._user) { startApply(id); }
+      else { window._pendingJob = id; openModal('signup'); }
+    }
+
+    function startApply(id) {
+      applyJobId = id; curStep = 1; payChoice = '';
+      ['a-name', 'a-email', 'a-phone', 'a-street', 'a-city', 'a-state', 'a-zip', 'a-country',
+        'a-dob-m', 'a-dob-d', 'a-dob-y', 'a-eng', 'a-dev', 'a-net', 'a-exp', 'a-cat', 'a-intro', 'a-pnote'].forEach(function (fid) {
+          var el = document.getElementById(fid); if (el) el.value = '';
+        });
+      var ic = document.getElementById('intc'); if (ic) ic.textContent = '0 chars';
+      document.querySelectorAll('.popt').forEach(function (p) { p.classList.remove('sel'); });
+      var pnw = document.getElementById('pnw'); if (pnw) pnw.style.display = 'none';
+      document.querySelectorAll('.fe').forEach(function (e) { e.classList.remove('on'); });
+      document.querySelectorAll('.fi').forEach(function (i) { i.classList.remove('err'); });
+      if (window._user) { var ae = document.getElementById('a-email'); if (ae) ae.value = window._user.email; }
+
+      var job = JOBS.find(function (j) { return j.id === id; });
+      var hdr = document.getElementById('a-hdr');
+      if (job && hdr) {
+        hdr.style.display = 'flex';
+        hdr.innerHTML = '';
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;align-items:flex-start;gap:13px';
+        var lg = document.createElement('div');
+        lg.className = 'jlogo';
+        lg.style.cssText = 'background:' + job.clr + ';flex-shrink:0';
+        lg.textContent = job.logo;
+        var info = document.createElement('div');
+        var jt = document.createElement('div');
+        jt.style.cssText = 'font-weight:700;font-size:16px;color:#0f172a';
+        jt.textContent = job.title;
+        var jc = document.createElement('div');
+        jc.style.cssText = 'color:#64748b;font-size:12px';
+        jc.textContent = job.co + ' · ' + job.loc;
+        var jm = document.createElement('div');
+        jm.style.cssText = 'display:flex;gap:6px;margin-top:5px';
+        var pb = document.createElement('span'); pb.className = 'bdg bgr'; pb.textContent = job.pay;
+        var tb = document.createElement('span'); tb.className = 'bdg bbl'; tb.textContent = job.type;
+        jm.appendChild(pb); jm.appendChild(tb);
+        info.appendChild(jt); info.appendChild(jc); info.appendChild(jm);
+        wrap.appendChild(lg); wrap.appendChild(info);
+        hdr.appendChild(wrap);
+        var cs = document.getElementById('a-cat'); if (cs) cs.value = job.cat;
+      }
+      updStep(); go('apply');
+    }
+
+    function updStep() {
+      for (var i = 1; i <= 4; i++) {
+        var s = document.getElementById('s' + i); if (s) s.classList.toggle('hidden', i !== curStep);
+        var dc = document.getElementById('d' + i);
+        if (dc) {
+          dc.className = 'sdc ' + (i < curStep ? 'done' : i === curStep ? 'cur' : 'up');
+          dc.textContent = i < curStep ? String.fromCharCode(10003) : String(i);
+          var dl = dc.parentElement.querySelector('.sdl');
+          if (dl) dl.className = 'sdl ' + (i === curStep ? 'cur' : 'up');
+        }
+      }
+      var pct = Math.round((curStep / 4) * 100);
+      document.getElementById('pbar').style.width = pct + '%';
+      document.getElementById('slbl').textContent = 'Step ' + curStep + ' of 4';
+      document.getElementById('spct').textContent = pct + '% complete';
+      document.getElementById('btn-back').style.display = curStep > 1 ? '' : 'none';
+      document.getElementById('btn-next').classList.toggle('hidden', curStep === 4);
+      document.getElementById('btn-sub').classList.toggle('hidden', curStep !== 4);
+      if (curStep === 4) buildSum();
+    }
+
+    function buildSum() {
+      var cm = { remote: 'Remote Jobs', 'data-entry': 'Data Entry', 'customer-support': 'Customer Support', 'virtual-assistant': 'Virtual Assistant', typing: 'Typing Jobs', freelance: 'Freelance', 'work-from-home': 'Work From Home', 'entry-level': 'Entry Level' };
+      var pm = { 'bank-ach': 'Bank Transfer', 'mobile-deposit': 'Mobile Deposit', 'credit-card': 'Credit Card', 'cryptocurrency': 'Cryptocurrency' };
+      var cat = document.getElementById('a-cat').value;
+      var m = document.getElementById('a-dob-m').value;
+      var dd = document.getElementById('a-dob-d').value;
+      var y = document.getElementById('a-dob-y').value;
+      var dob = (m || '--') + '/' + (dd || '--') + '/' + (y || '----');
+      var addrParts = [
+        document.getElementById('a-street').value,
+        document.getElementById('a-city').value,
+        document.getElementById('a-state').value,
+        document.getElementById('a-country').value
+      ].filter(Boolean);
+      var rows = [
+        ['Name', document.getElementById('a-name').value],
+        ['Email', document.getElementById('a-email').value],
+        ['Phone', document.getElementById('a-phone').value],
+        ['Date of Birth', dob],
+        ['Address', addrParts.join(', ')],
+        ['Category', cm[cat] || cat],
+        ['Payment', pm[payChoice] || '--']
+      ];
+      var asum = document.getElementById('asum');
+      asum.innerHTML = '';
+      rows.filter(function (r) { return r[1]; }).forEach(function (r) {
+        var d = document.createElement('div');
+        var k = document.createElement('span'); k.style.color = '#94a3b8'; k.textContent = r[0] + ': ';
+        var v = document.createElement('span'); v.style.cssText = 'font-weight:600;color:#0f172a'; v.textContent = r[1];
+        d.appendChild(k); d.appendChild(v);
+        asum.appendChild(d);
+      });
+    }
+
+    function fErr(id, msg) { var e = document.getElementById(id); if (e) { e.textContent = msg; e.classList.add('on'); } }
+    function hErr(id) { var e = document.getElementById(id); if (e) e.classList.remove('on'); }
+    function mErr(id, bad) { var e = document.getElementById(id); if (e) { if (bad) e.classList.add('err'); else e.classList.remove('err'); } }
+
+    function chkStep() {
+      var ok = true;
+      if (curStep === 1) {
+        var n = document.getElementById('a-name').value.trim();
+        var em = document.getElementById('a-email').value.trim();
+        var ph = document.getElementById('a-phone').value.trim();
+        var st = document.getElementById('a-street').value.trim();
+        var ci = document.getElementById('a-city').value.trim();
+        var co = document.getElementById('a-country').value.trim();
+        if (!n) { fErr('e-name', 'Full name is required'); mErr('a-name', true); ok = false; } else { hErr('e-name'); mErr('a-name', false); }
+        if (!em || em.indexOf('@') < 1) { fErr('e-email', 'Valid email required'); mErr('a-email', true); ok = false; } else { hErr('e-email'); mErr('a-email', false); }
+        if (!ph) { fErr('e-phone', 'Phone number is required'); mErr('a-phone', true); ok = false; } else { hErr('e-phone'); mErr('a-phone', false); }
+        if (!st) { fErr('e-street', 'Street address is required'); mErr('a-street', true); ok = false; } else { hErr('e-street'); mErr('a-street', false); }
+        if (!ci) { fErr('e-city', 'City is required'); mErr('a-city', true); ok = false; } else { hErr('e-city'); mErr('a-city', false); }
+        if (!co) { fErr('e-country', 'Country is required'); mErr('a-country', true); ok = false; } else { hErr('e-country'); mErr('a-country', false); }
+      }
+      if (curStep === 2) {
+        var dobM = document.getElementById('a-dob-m').value.trim();
+        var dobD = document.getElementById('a-dob-d').value.trim();
+        var dobY = document.getElementById('a-dob-y').value.trim();
+        var en = document.getElementById('a-eng').value;
+        var dv = document.getElementById('a-dev').value;
+        var nt = document.getElementById('a-net').value;
+        var dobOk = false;
+        if (dobM && dobD && dobY && dobY.length === 4) {
+          var mo = parseInt(dobM), dy = parseInt(dobD), yr = parseInt(dobY);
+          var now = new Date();
+          var age = now.getFullYear() - yr - (now < new Date(now.getFullYear(), mo - 1, dy) ? 1 : 0);
+          dobOk = mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31 && yr >= 1900 && age >= 18 && age <= 100;
+        }
+        if (!dobOk) { fErr('e-age', 'Valid date of birth required. Must be 18 or older.'); mErr('a-dob-m', true); mErr('a-dob-d', true); mErr('a-dob-y', true); ok = false; }
+        else { hErr('e-age'); mErr('a-dob-m', false); mErr('a-dob-d', false); mErr('a-dob-y', false); }
+        if (!en) { fErr('e-eng', 'Select your English level'); mErr('a-eng', true); ok = false; } else { hErr('e-eng'); mErr('a-eng', false); }
+        if (!dv) { fErr('e-dev', 'Select a device type'); mErr('a-dev', true); ok = false; } else { hErr('e-dev'); mErr('a-dev', false); }
+        if (!nt) { fErr('e-net', 'Select internet access'); mErr('a-net', true); ok = false; } else { hErr('e-net'); mErr('a-net', false); }
+      }
+      if (curStep === 3) {
+        var ct = document.getElementById('a-cat').value;
+        var tx = document.getElementById('a-intro').value.trim();
+        if (!ct) { fErr('e-cat', 'Select a job category'); mErr('a-cat', true); ok = false; } else { hErr('e-cat'); mErr('a-cat', false); }
+        if (tx.length < 30) { fErr('e-intro', 'Please write at least 30 characters'); mErr('a-intro', true); ok = false; } else { hErr('e-intro'); mErr('a-intro', false); }
+      }
+      if (curStep === 4) {
+        if (!payChoice) { fErr('e-pay', 'Please select a payment method'); ok = false; } else { hErr('e-pay'); }
+      }
+      return ok;
+    }
+
+    function stepNext() { if (chkStep()) { curStep++; updStep(); window.scrollTo({ top: 0 }); } }
+    function stepBack() { if (curStep > 1) { curStep--; updStep(); window.scrollTo({ top: 0 }); } }
+
+    function pickPay(id, btnId) {
+      payChoice = id;
+      document.querySelectorAll('.popt').forEach(function (p) { p.classList.remove('sel'); });
+      document.getElementById(btnId).classList.add('sel');
+      hErr('e-pay');
+      document.getElementById('pnw').style.display = 'block';
+      var ph = { 'bank-ach': 'Notes about bank transfer...', 'mobile-deposit': 'e.g. I use Zelle or Cash App...', 'credit-card': 'e.g. I prefer Visa prepaid card...', 'cryptocurrency': 'e.g. I prefer USDT or Bitcoin...' };
+      document.getElementById('a-pnote').placeholder = ph[id] || '';
+    }
+
+    async function submitForm() {
+      if (!chkStep()) return;
+      var btn = document.getElementById('btn-sub');
+      btn.disabled = true; btn.textContent = 'Submitting...';
+      var cm = { remote: 'Remote Jobs', 'data-entry': 'Data Entry', 'customer-support': 'Customer Support', 'virtual-assistant': 'Virtual Assistant', typing: 'Typing Jobs', freelance: 'Freelance', 'work-from-home': 'Work From Home', 'entry-level': 'Entry Level' };
+      var pm = { 'bank-ach': 'Bank Transfer (ACH)', 'mobile-deposit': 'Mobile Deposit', 'credit-card': 'Credit Card Payment', 'cryptocurrency': 'Cryptocurrency' };
+      var job = JOBS.find(function (j) { return j.id === applyJobId; }) || { title: 'General Application' };
+      var data = {
+        fullName: document.getElementById('a-name').value,
+        email: document.getElementById('a-email').value,
+        phone: document.getElementById('a-phone').value,
+        streetAddress: document.getElementById('a-street').value,
+        city: document.getElementById('a-city').value,
+        stateProvince: document.getElementById('a-state').value,
+        zipCode: document.getElementById('a-zip').value,
+        country: document.getElementById('a-country').value,
+        dateOfBirth: document.getElementById('a-dob-m').value.padStart(2, '0') + '/' +
+          document.getElementById('a-dob-d').value.padStart(2, '0') + '/' +
+          document.getElementById('a-dob-y').value,
+        englishLevel: document.getElementById('a-eng').value,
+        deviceType: document.getElementById('a-dev').value,
+        internetAccess: document.getElementById('a-net').value,
+        experienceLevel: document.getElementById('a-exp').value,
+        preferredCategory: cm[document.getElementById('a-cat').value] || document.getElementById('a-cat').value,
+        introduction: document.getElementById('a-intro').value,
+        paymentMethod: pm[payChoice] || payChoice,
+        paymentNote: document.getElementById('a-pnote').value,
+        jobTitle: job.title,
+        status: 'pending',
+        userEmail: window._user ? window._user.email : '',
+        userId: window._user ? window._user.uid : '',
+        submittedAt: new Date().toISOString()
+      };
+      try {
+        if (window._fbDB && window._fbCol && window._fbAdd) {
+          await window._fbAdd(window._fbCol(window._fbDB, 'applications'), Object.assign({}, data, { createdAt: window._fbTS ? window._fbTS() : new Date() }));
+        }
+      } catch (e) { console.warn('Firebase:', e.message); }
+      try {
+        await fetch('https://formspree.io/f/mgoqzbyg', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data)
+        });
+      } catch (e) { console.warn('Formspree:', e.message); }
+      btn.disabled = false; btn.textContent = 'Submit Application';
+      go('success');
+    }
+
+    // ── Contact ──────────────────────────────────────────────────
+    async function sendContact() {
+      var n = document.getElementById('cn').value;
+      var e = document.getElementById('ce').value;
+      var s = document.getElementById('csu').value;
+      var m = document.getElementById('cm').value;
+      if (!n || !e || !m) { alert('Please fill in Name, Email, and Message.'); return; }
+      try {
+        await fetch('https://formspree.io/f/mgoqzbyg', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ _type: 'contact', name: n, email: e, subject: s, message: m })
+        });
+      } catch (err) { }
+      document.getElementById('cform').classList.add('hidden');
+      document.getElementById('csent').classList.remove('hidden');
+    }
+
+    // ── Chat Widget ──────────────────────────────────────────────
+    var CREPLIES = [
+      'Thank you for applying! Our team carefully reviews every application and responds within 1–3 business days.',
+      'PrimeJobAxis is completely free — no hidden fees, no payments, ever.',
+      'No experience? No problem. Many opportunities are open to beginners ready to start.',
+      'Need help quickly? Reach out to us anytime at info@primejobaxis.com.',
+      'Your location does not limit your success — apply from anywhere in the world.',
+    ];
+    var chatOpen = false;
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      document.getElementById('cbox').classList.toggle('open', chatOpen);
+      if (chatOpen && !document.getElementById('cmsgs').children.length)
+        addCm('bot', 'Hi! Welcome to PrimeJobAxis. How can I help you today?');
+    }
+    function addCm(t, x) {
+      var b = document.getElementById('cmsgs');
+      var d = document.createElement('div');
+      d.className = 'cm ' + t;
+      d.textContent = x;
+      b.appendChild(d);
+      b.scrollTop = b.scrollHeight;
+    }
+    function sendChat() {
+      var inp = document.getElementById('cin');
+      var msg = inp.value.trim();
+      if (!msg) return;
+      addCm('usr', msg);
+      inp.value = '';
+      setTimeout(function () { addCm('bot', CREPLIES[Math.floor(Math.random() * CREPLIES.length)]); }, 800);
+    }
+
+    // ── Newsletter ───────────────────────────────────────────────
+    function subNews() {
+      var e = document.getElementById('nem').value;
+      if (!e) { alert('Please enter your email.'); return; }
+      var wrap = document.getElementById('nwrap');
+      if (wrap) {
+        wrap.innerHTML = '';
+        var msg = document.createElement('div');
+        msg.style.cssText = 'background:rgba(255,255,255,.2);border-radius:9px;padding:11px 20px;color:#fff;font-weight:600';
+        msg.textContent = 'Subscribed! Job alerts coming your way.';
+        wrap.appendChild(msg);
+      }
+    }
+
+    // ── Stats Counter ────────────────────────────────────────────
+    function runCounters() {
+      document.querySelectorAll('[data-to]').forEach(function (el) {
+        var target = parseInt(el.getAttribute('data-to'));
+        var sfx = el.querySelector('span').textContent;
+        var cur = 0;
+        var step = Math.ceil(target / 80);
+        var iv = setInterval(function () {
+          cur = Math.min(cur + step, target);
+          el.innerHTML = cur.toLocaleString() + '<span>' + sfx + '</span>';
+          if (cur >= target) clearInterval(iv);
+        }, 20);
+      });
+    }
+
+    // ── Scroll Reveal ─────────────────────────────────────────────
+    function doReveal() {
+      setTimeout(function () {
+        var obs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { if (e.isIntersecting) e.target.classList.add('in'); });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal:not(.in)').forEach(function (el) { obs.observe(el); });
+      }, 100);
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function showToast(msg, type) {
+      var existing = document.querySelector('.toast'); if (existing) existing.remove();
+      var t = document.createElement('div');
+      t.className = 'toast';
+      t.style.background = type === 'green' ? '#10b981' : '#0284c7';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function () { if (t.parentNode) t.remove(); }, 3500);
+    }
+
+   // ── Init ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function () {
+  initHome();
+  filterJobs();
+  doReveal();
+  setTimeout(runCounters, 400);
+  
+  // IMPORTANT: Fix auto-logout on page refresh
+  if (window._user) {
+    updateAuthButtons();
+    const wb = document.getElementById('welcome-banner');
+    if (wb) wb.style.display = 'block';
+  }
+});
+
+  </script>
+</body>
+
+</html>
