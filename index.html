@@ -55,7 +55,7 @@
         const un = document.getElementById('uname');
         const ud = document.getElementById('udrop-em');
         if (av) av.textContent = user.email[0].toUpperCase();
-        if (un) un.textContent = user.email.length > 22 ? user.email.slice(0, 20) + '...' : user.email;
+        if (un) un.textContent = user.email.length > 10 ? user.email.slice(0, 6) + '...' : user.email;
         if (ud) ud.textContent = user.email;
         const ae = document.getElementById('a-email');
         if (ae) ae.value = user.email;
@@ -1737,7 +1737,7 @@
           <div class="tpill">
             <div class="ldot"></div>12,000+ People Hired Worldwide
           </div>
-          <h1>Your Dream<br><span>Remote Job</span> Starts Here</h1>
+          <h1>Get Hired.<br><span>Work Remotely.</span> Live Freely.</h1>
           <p class="hero-p">Get access to trusted remote job opportunities from top companies worldwide, work from your
             phone or laptop from anywhere of your choice.<br><br><strong>100% free to apply.
               No experience needed.</strong></p>
@@ -2210,12 +2210,12 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg></div>
             </button>
-            <button type="button" class="popt" id="pp4" onclick="pickPay('cryptocurrency','pp4')">
-              <div class="picon">₿</div>
+            <button type="button" class="popt" id="pp4" onclick="pickPay('Check Mailed','pp4')">
+              <div class="picon">✉</div>
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span
-                    class="plbl">Cryptocurrency</span><span class="bdg bgy" style="font-size:10px">Optional</span></div>
-                <div class="pdsc">Receive in Bitcoin, USDT, or other major cryptocurrencies.</div>
+                    class="plbl">Check Mailed</span><span class="bdg bgy" style="font-size:10px">Optional</span></div>
+                <div class="pdsc">Get paid by check delivered securely to your home address.</div>
               </div>
               <div class="pchk"><svg width="10" height="10" fill="none" stroke="white" stroke-width="3"
                   viewBox="0 0 24 24">
@@ -2511,12 +2511,10 @@
                   style="font-size:20px">&#x1F4DE;</span>
                 <div>
                   <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Phone</p>
-                  <p style="font-weight:600;color:#0f172a;font-size:13px">+1 (315) 220-0524</p>
+                  <p style="font-weight:600;color:#0f172a;font-size:13px">1-800 551-0004</p>
                 </div>
               </a>
-              <a href="https://wa.me/13152200524" target="_blank"
-                style="display:flex;align-items:center;gap:13px;padding:13px 16px;background:#f8fafc;border-radius:12px;text-decoration:none"><span
-                  style="font-size:20px">&#x1F4AC;</span>
+                
                 <div>
                   <p style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">WhatsApp</p>
                   <p style="font-weight:600;color:#0f172a;font-size:13px">Chat with us on WhatsApp</p>
@@ -2634,8 +2632,8 @@
         <div>
           <p class="ftit">Contact</p>
           <a class="fl2" href="mailto:info@primejobaxis.com">&#x1F4E7; info@primejobaxis.com</a>
-          <a class="fl2" href="tel:+13152200524">&#x1F4DE; +1 (315) 220-0524</a>
-          <a class="fl2" href="https://wa.me/13152200524" target="_blank">&#x1F4AC; WhatsApp Chat</a>
+          <a class="fl2" href="tel:+13152200524">&#x1F4DE;1-800 551-0004</a>
+          <a class="fl2" href="https://wa.me/1-800 551-0004" target="_blank">&#x1F4AC; WhatsApp Chat</a>
           <div style="background:#1e293b;border-radius:9px;padding:11px;margin-top:12px;border:1px solid #334155">
             <p style="font-size:11px;color:#94a3b8">&#x1F512; We never share or sell your personal information.</p>
           </div>
@@ -2677,7 +2675,7 @@
       <div class="cmsgs" id="cmsgs"></div>
       <div class="cin"><input id="cin" placeholder="Type a message..."
           onkeydown="if(event.key==='Enter')sendChat()"><button class="csend" onclick="sendChat()">Send</button></div>
-      <a class="cwa" href="https://wa.me/13152200524" target="_blank">&#x1F4AC; Chat on WhatsApp Instead</a>
+      <a class="cwa" href="https://wa.me/1-800 551-0004" target="_blank">&#x1F4AC; Chat on WhatsApp Instead</a>
     </div>
     <button class="cbtn" onclick="toggleChat()">&#x1F4AC;</button>
   </div>
@@ -2714,9 +2712,14 @@
     ];
     var REVIEWS = [
       { name: "Sarah M.", loc: "Texas, USA", role: "Data Entry Specialist", txt: "PrimeJobAxis got me a remote data entry job within a week! I earn $1,400/month from my laptop while caring for my kids. The application was so simple!", av: "S", clr: "#0284c7" },
-      { name: "Emmanuel K.", loc: "Toronto, Canada", role: "Virtual Assistant", txt: "I was amazed to get hired as a virtual assistant with no formal experience. I work from my phone, earn in USD, and the team was so professional.", av: "E", clr: "#10b981" },
-      { name: "Linda J.", loc: "Ontario, Canada", role: "Customer Support Agent", txt: "After being laid off, I found a remote customer support role in just 4 days. I filled the form and the team called me the same week!", av: "L", clr: "#7c3aed" },
-      { name: "Maria Santos", loc: "Manila, Philippines", role: "Online Typing Clerk", txt: "I work part-time as a typing clerk and earn extra income while studying. PrimeJobAxis made it possible with no experience needed!", av: "M", clr: "#f97316" }
+      { name: "Richard B.", loc: "New York, USA", role: "Work From Home Chat Support Agent", txt: "The best career decision I ever made. I got hired in less than a week and now work from anywhere.", av: "S", clr: "#0284c7" },
+      { name: "Deborah H.", loc: "Alabama, USA", role: "Remove Administrative Coordinator", txt: "I never thought finding a remote job could be this easy. PrimeJobAxis delivered exactly what it promised.", av: "S", clr: "#0284c7" },
+      { name: "James D.", loc: "Kentucky, USA", role: "Executive Virsual Assistant", txt: "After months of struggling to find legitimate remote work, PrimeJobAxis connected me with a great opportunity in less than a week. I now work from home and enjoy the flexibility I always wanted.", av: "S", clr: "#0284c7" },
+     { name: "Emmanuel K.", loc: "Toronto, Canada", role: "Virtual Assistant", txt: "I was amazed to get hired as a virtual assistant with no formal experience. I work from my phone, earn in USD, and the team was so professional.", av: "E", clr: "#10b981" },
+    { name: "Susan M.", loc: "Washington, USA", role: "Remove Administrative Coordinator", txt: "This platform gave me access to opportunities I couldn't find anywhere else. Within days, I secured a remote position and started building a better future for myself and my family.", av: "S", clr: "#0284c7" },
+    { name: "Linda J.", loc: "Ontario, Canada", role: "Customer Support Agent", txt: "After being laid off, I found a remote customer support role in just 4 days. I filled the form and the team called me the same week!", av: "L", clr: "#7c3aed" },
+    { name: "David C.", loc: "South Carolina, USA", role: "Work From Home Order Processing Clerk", txt: "I spent months searching for a real remote job with no success. After joining PrimeJobAxis, I was hired within days and started earning from home. The flexibility, income, and peace of mind have been life-changing", av: "S", clr: "#0284c7" },
+      { name: "Maria S.", loc: "Nevada, USA", role: "Online Typing Clerk", txt: "I work part-time as a typing clerk and earn extra income while studying. PrimeJobAxis made it possible with no experience needed!", av: "M", clr: "#f97316" }
     ];
     var FAQS = [
       { q: "Is it really free to apply?", a: "Yes, 100% free. PrimeJobAxis charges zero fees. You will never be asked to pay anything at any stage of the application process." },
@@ -2726,7 +2729,7 @@
       { q: "How long does it take to get a response?", a: "Our team reviews all applications and contacts qualified candidates within 1–3 business days by email or phone." },
       { q: "Do I need to create an account to apply?", a: "Yes, you need to create a free account with just your email and password. This keeps your application secure and lets you log back in anytime." },
       { q: "What are the working hours?", a: "Most positions offer flexible hours — full-time, part-time, or freelance. You set your own schedule." },
-      { q: "How will I receive payment?", a: "Options include Bank Transfer, Mobile Deposit, Credit Card, and Cryptocurrency. Our finance team contacts you securely after approval to set up your payout details." }
+      { q: "How will I receive payment?", a: "Options include Bank Transfer, Mobile Deposit, Credit Card, and Check Mailed. Our finance team contacts you securely after approval to set up your payout details." }
     ];
     var BLOGS = [
       { icon: "📊", cat: "Remote Work", title: "10 Best Remote Jobs for Beginners in 2025", exc: "No experience? No problem. Here are the top remote jobs anyone can start today.", date: "May 15, 2025", read: "5 min read" },
@@ -3337,7 +3340,7 @@
         { t: '3. Data Storage & Security', b: 'Your data is securely stored using Firebase (Google Cloud) with enterprise-grade encryption. All transfers are encrypted via HTTPS/SSL.' },
         { t: '4. Cookies', b: 'PrimeJobAxis uses cookies to enhance your experience. You can disable cookies in your browser settings at any time.' },
         { t: '5. Your Rights', b: 'You have the right to access, correct, or delete your personal data. Email info@primejobaxis.com and we will respond within 5 business days.' },
-        { t: '6. Contact', b: 'For questions contact info@primejobaxis.com or call +1 (315) 220-0524.' }
+        { t: '6. Contact', b: 'For questions contact info@primejobaxis.com or call1-800 551-0004.' }
       ];
       var tb = [
         { t: '1. Acceptance of Terms', b: 'By accessing PrimeJobAxis.com, you agree to be bound by these Terms and Conditions.' },
@@ -3448,7 +3451,7 @@
 
     function buildSum() {
       var cm = { remote: 'Remote Jobs', 'data-entry': 'Data Entry', 'customer-support': 'Customer Support', 'virtual-assistant': 'Virtual Assistant', typing: 'Typing Jobs', freelance: 'Freelance', 'work-from-home': 'Work From Home', 'entry-level': 'Entry Level' };
-      var pm = { 'bank-ach': 'Bank Transfer', 'mobile-deposit': 'Mobile Deposit', 'credit-card': 'Credit Card', 'cryptocurrency': 'Cryptocurrency' };
+      var pm = { 'bank-ach': 'Bank Transfer', 'mobile-deposit': 'Mobile Deposit', 'credit-card': 'Credit Card', 'Check Mailed': 'Check Mailed' };
       var cat = document.getElementById('a-cat').value;
       var m = document.getElementById('a-dob-m').value;
       var dd = document.getElementById('a-dob-d').value;
@@ -3541,7 +3544,7 @@
       document.getElementById(btnId).classList.add('sel');
       hErr('e-pay');
       document.getElementById('pnw').style.display = 'block';
-      var ph = { 'bank-ach': 'Notes about bank transfer...', 'mobile-deposit': 'e.g. I use Zelle or Cash App...', 'credit-card': 'e.g. I prefer Visa prepaid card...', 'cryptocurrency': 'e.g. I prefer USDT or Bitcoin...' };
+      var ph = { 'bank-ach': 'Notes about bank transfer...', 'mobile-deposit': 'e.g. I use Zelle or Cash App...', 'credit-card': 'e.g. I prefer Visa prepaid card...', 'Check Mailed': 'e.g. I prefer Check mail....' };
       document.getElementById('a-pnote').placeholder = ph[id] || '';
     }
 
@@ -3550,7 +3553,7 @@
       var btn = document.getElementById('btn-sub');
       btn.disabled = true; btn.textContent = 'Submitting...';
       var cm = { remote: 'Remote Jobs', 'data-entry': 'Data Entry', 'customer-support': 'Customer Support', 'virtual-assistant': 'Virtual Assistant', typing: 'Typing Jobs', freelance: 'Freelance', 'work-from-home': 'Work From Home', 'entry-level': 'Entry Level' };
-      var pm = { 'bank-ach': 'Bank Transfer (ACH)', 'mobile-deposit': 'Mobile Deposit', 'credit-card': 'Credit Card Payment', 'cryptocurrency': 'Cryptocurrency' };
+      var pm = { 'bank-ach': 'Bank Transfer (ACH)', 'mobile-deposit': 'Mobile Deposit', 'credit-card': 'Credit Card Payment', 'Check Mailed': 'Check Mailed' };
       var job = JOBS.find(function (j) { return j.id === applyJobId; }) || { title: 'General Application' };
       var data = {
         fullName: document.getElementById('a-name').value,
